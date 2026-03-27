@@ -814,4 +814,346 @@
         });
     });
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TALKTIV AI CHATBOT WIDGET
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+  #tv-chat-root*{box-sizing:border-box}
+  @keyframes tv-pulse{0%,100%{box-shadow:0 0 0 0 rgba(197,192,255,.4)}50%{box-shadow:0 0 0 14px rgba(197,192,255,0)}}
+  @keyframes tv-slideup{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes tv-bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-6px);opacity:1}}
+  @keyframes tv-pulser{0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.4)}50%{box-shadow:0 0 0 8px rgba(255,90,90,0)}}
+
+  #tv-bubble{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg,#c5c0ff 0%,#68dbae 100%);border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;z-index:9999;
+    animation:tv-pulse 2.5s ease-in-out infinite;transition:transform .2s;
+    box-shadow:0 4px 24px rgba(197,192,255,.35)}
+  #tv-bubble:hover{transform:scale(1.09)}
+  #tv-bubble svg{width:26px;height:26px;color:#11121f}
+
+  #tv-win{position:fixed;bottom:92px;right:24px;width:380px;height:520px;
+    background:rgba(17,18,31,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border:1px solid rgba(197,192,255,.2);border-radius:20px;display:flex;flex-direction:column;
+    z-index:9998;overflow:hidden;animation:tv-slideup .22s ease;font-family:'Inter',sans-serif;
+    box-shadow:0 24px 64px rgba(0,0,0,.65),0 0 0 1px rgba(197,192,255,.07)}
+  #tv-win.tv-h{display:none!important}
+
+  #tv-hdr{padding:14px 18px;border-bottom:1px solid rgba(197,192,255,.12);
+    display:flex;align-items:center;gap:12px;background:rgba(29,31,44,.85)}
+  .tv-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c5c0ff,#68dbae);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+  .tv-ht{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;color:#e2e1f3;line-height:1.2}
+  .tv-hs{font-size:11px;color:#928f9d;margin-top:2px}
+  .tv-dot{width:7px;height:7px;border-radius:50%;background:#68dbae;display:inline-block;margin-right:4px}
+  #tv-cls{background:none;border:none;cursor:pointer;color:#928f9d;padding:4px;border-radius:6px;
+    display:flex;align-items:center;margin-left:auto;transition:color .15s}
+  #tv-cls:hover{color:#e2e1f3}
+
+  #tv-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+    scrollbar-width:thin;scrollbar-color:rgba(197,192,255,.18) transparent}
+  #tv-msgs::-webkit-scrollbar{width:3px}
+  #tv-msgs::-webkit-scrollbar-thumb{background:rgba(197,192,255,.18);border-radius:3px}
+
+  .tv-m{display:flex;gap:8px;max-width:90%}
+  .tv-m.tv-u{align-self:flex-end;flex-direction:row-reverse}
+  .tv-m.tv-b{align-self:flex-start}
+  .tv-mav{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#c5c0ff,#68dbae);
+    display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:3px}
+  .tv-mb{padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.55;word-break:break-word}
+  .tv-u .tv-mb{background:rgba(197,192,255,.16);border:1px solid rgba(197,192,255,.22);
+    color:#e2e1f3;border-radius:16px 4px 16px 16px}
+  .tv-b .tv-mb{background:rgba(29,31,44,.92);border:1px solid rgba(197,192,255,.11);
+    color:#e2e1f3;border-radius:4px 16px 16px 16px}
+  .tv-typ{display:flex;gap:4px;align-items:center;padding:11px 14px}
+  .tv-typ span{width:6px;height:6px;background:#c5c0ff;border-radius:50%;animation:tv-bounce 1.2s ease-in-out infinite}
+  .tv-typ span:nth-child(2){animation-delay:.2s}
+  .tv-typ span:nth-child(3){animation-delay:.4s}
+
+  .tv-abts{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 0 34px}
+  .tv-abt{padding:6px 13px;border-radius:20px;border:1px solid rgba(197,192,255,.28);
+    background:rgba(197,192,255,.07);color:#c5c0ff;font-size:12px;cursor:pointer;transition:background .15s}
+  .tv-abt:hover{background:rgba(197,192,255,.17)}
+
+  .tv-form{background:rgba(29,31,44,.92);border:1px solid rgba(197,192,255,.12);border-radius:12px;
+    padding:12px;margin:4px 0 0 34px;display:flex;flex-direction:column;gap:8px}
+  .tv-form input{background:rgba(17,18,31,.85);border:1px solid rgba(197,192,255,.2);color:#e2e1f3;
+    border-radius:8px;padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;width:100%;outline:none}
+  .tv-form input:focus{border-color:rgba(197,192,255,.5)}
+  .tv-form input::placeholder{color:#928f9d}
+  .tv-form button{background:linear-gradient(135deg,#c5c0ff,#68dbae);color:#11121f;font-weight:600;
+    font-size:13px;border:none;border-radius:8px;padding:9px;cursor:pointer;transition:opacity .15s}
+  .tv-form button:hover{opacity:.88}
+
+  #tv-inp{padding:12px 14px;border-top:1px solid rgba(197,192,255,.1);background:rgba(17,18,31,.6)}
+  #tv-row{display:flex;gap:8px;align-items:center}
+  #tv-ti{flex:1;background:rgba(29,31,44,.9);border:1px solid rgba(197,192,255,.18);color:#e2e1f3;
+    border-radius:24px;padding:9px 15px;font-size:13.5px;font-family:'Inter',sans-serif;outline:none;
+    transition:border-color .15s}
+  #tv-ti:focus{border-color:rgba(197,192,255,.42)}
+  #tv-ti::placeholder{color:#928f9d}
+  #tv-ti:disabled{opacity:.45}
+  .tv-ib{width:37px;height:37px;border-radius:50%;border:none;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;transition:transform .15s,opacity .15s;flex-shrink:0}
+  .tv-ib:hover{transform:scale(1.09)}
+  .tv-ib:disabled{opacity:.38;cursor:default;transform:none}
+  #tv-sb{background:linear-gradient(135deg,#68dbae,#26a37a)}
+  #tv-mb2{background:rgba(197,192,255,.13);border:1px solid rgba(197,192,255,.28)}
+  #tv-mb2.tv-rec{background:rgba(255,80,80,.18);border-color:rgba(255,80,80,.45);animation:tv-pulser 1s ease-in-out infinite}
+  #tv-st{font-size:11px;color:#928f9d;text-align:center;padding:3px 0 0;min-height:15px}
+
+  @media(max-width:480px){
+    #tv-win{width:calc(100vw - 16px);right:8px;bottom:76px;height:calc(100vh - 96px);max-height:560px}
+    #tv-bubble{bottom:14px;right:14px}
+  }
+</style>
+
+<!-- Bubble -->
+<button id="tv-bubble" aria-label="Chat with Talktiv AI">
+  <svg id="tv-bmic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2z"/>
+  </svg>
+  <svg id="tv-bx" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+    <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+  </svg>
+</button>
+
+<!-- Chat window -->
+<div id="tv-win" class="tv-h">
+  <div id="tv-hdr">
+    <div class="tv-av">🎙️</div>
+    <div style="flex:1">
+      <div class="tv-ht">Talktiv AI</div>
+      <div class="tv-hs"><span class="tv-dot"></span>Ask me anything</div>
+    </div>
+    <button id="tv-cls" aria-label="Close">
+      <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
+    </button>
+  </div>
+  <div id="tv-msgs"></div>
+  <div id="tv-inp">
+    <div id="tv-row">
+      <input id="tv-ti" type="text" placeholder="Type or speak in any language..." autocomplete="off"/>
+      <button class="tv-ib" id="tv-sb" aria-label="Send">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#11121f"><path d="M2 21 23 12 2 3v7l15 2-15 2z"/></svg>
+      </button>
+      <button class="tv-ib" id="tv-mb2" aria-label="Hold to speak">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#c5c0ff">
+          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2z"/>
+        </svg>
+      </button>
+    </div>
+    <div id="tv-st"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var WS_URL   = 'wss://web-production-6346d.up.railway.app/chat';
+  var BOOK_URL = 'https://web-production-6346d.up.railway.app/book-appointment';
+  var SID      = 'tv-' + Math.random().toString(36).slice(2,10);
+  var GREET    = "Hi! I'm Talktiv, your AI assistant \uD83C\uDF10 I can answer questions about our products, book a demo call, or connect you with our team in any language. How can I help you today?";
+
+  var ws,isOpen=false,waiting=false,recActive=false,greeted=false,wsOk=false,q=[];
+  var audioCtx,micStream,processor,pcmBufs=[];
+
+  var bubble=document.getElementById('tv-bubble'),
+      bmic=document.getElementById('tv-bmic'),
+      bx=document.getElementById('tv-bx'),
+      win=document.getElementById('tv-win'),
+      msgs=document.getElementById('tv-msgs'),
+      ti=document.getElementById('tv-ti'),
+      sb=document.getElementById('tv-sb'),
+      mb=document.getElementById('tv-mb2'),
+      cls=document.getElementById('tv-cls'),
+      st=document.getElementById('tv-st');
+
+  /* ── WebSocket ─────────────────────────────────────── */
+  function connect(){
+    if(ws&&(ws.readyState===0||ws.readyState===1))return;
+    wsOk=false; setSt('Connecting...');
+    ws=new WebSocket(WS_URL);
+    ws.onopen=function(){wsOk=true;setSt('');while(q.length){var m=q.shift();ws.send(JSON.stringify(m));}};
+    ws.onmessage=function(e){
+      try{
+        var d=JSON.parse(e.data);
+        removeTyp(); setWait(false);
+        if(d.type==='error'){addMsg('b',d.message||'Error. Please try again.');return;}
+        addMsg('b',d.message||'');
+        var act=d.action, ad=d.action_data||{};
+        if(act==='open_whatsapp'){
+          var num=(ad.number||'+91XXXXXXXXXX').replace(/\D/g,'');
+          showBtns([{lbl:'\uD83D\uDCAC Open WhatsApp',fn:function(){window.open('https://wa.me/'+num,'_blank');}}]);
+        } else if(act==='book_appointment'){showApptForm(ad);}
+        else if(act==='request_email'){showEmailForm(ad);}
+      }catch(err){console.error('[Talktiv]',err);}
+    };
+    ws.onclose=function(){wsOk=false;setSt('Reconnecting...');setTimeout(connect,3000);};
+    ws.onerror=function(){setSt('Connection error — retrying...');};
+  }
+
+  function wsSend(p){
+    p.session_id=SID;
+    if(wsOk&&ws&&ws.readyState===1){ws.send(JSON.stringify(p));}
+    else{q.push(p);connect();}
+  }
+
+  /* ── Open/close ────────────────────────────────────── */
+  bubble.addEventListener('click',function(){
+    isOpen=!isOpen;
+    win.classList.toggle('tv-h',!isOpen);
+    bmic.style.display=isOpen?'none':'';
+    bx.style.display=isOpen?'':'none';
+    bubble.style.animation=isOpen?'none':'';
+    if(isOpen){
+      connect();
+      if(!greeted){greeted=true;setTimeout(function(){addMsg('b',GREET);},350);}
+      ti.focus();
+    }
+  });
+  cls.addEventListener('click',function(){
+    isOpen=false;win.classList.add('tv-h');
+    bmic.style.display='';bx.style.display='none';bubble.style.animation='';
+  });
+
+  /* ── Text send ─────────────────────────────────────── */
+  function sendText(){
+    var t=ti.value.trim();if(!t||waiting)return;
+    addMsg('u',t);ti.value='';setWait(true);showTyp();
+    wsSend({type:'text',message:t,lang:'auto'});
+  }
+  sb.addEventListener('click',sendText);
+  ti.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText();}});
+
+  /* ── Mic: hold to record via ScriptProcessor ────────── */
+  function pcmToWav(chunks,rate){
+    var len=0;chunks.forEach(function(c){len+=c.length;});
+    var buf=new ArrayBuffer(44+len*2),view=new DataView(buf);
+    function wr(o,s){for(var i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
+    wr(0,'RIFF');view.setUint32(4,36+len*2,true);wr(8,'WAVE');
+    wr(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);
+    view.setUint16(22,1,true);view.setUint32(24,rate,true);
+    view.setUint32(28,rate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);
+    wr(36,'data');view.setUint32(40,len*2,true);
+    var off=44;chunks.forEach(function(c){
+      for(var i=0;i<c.length;i++){
+        var s=Math.max(-1,Math.min(1,c[i]));
+        view.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;
+      }
+    });
+    return buf;
+  }
+
+  function b64(ab){
+    var u8=new Uint8Array(ab),s='';
+    for(var i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);
+    return btoa(s);
+  }
+
+  async function startRec(){
+    if(waiting||recActive)return;
+    try{
+      micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+      var src=audioCtx.createMediaStreamSource(micStream);
+      processor=audioCtx.createScriptProcessor(4096,1,1);
+      pcmBufs=[];
+      processor.onaudioprocess=function(e){
+        pcmBufs.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      };
+      src.connect(processor);processor.connect(audioCtx.destination);
+      recActive=true;mb.classList.add('tv-rec');setSt('Listening\u2026 release to send');
+    }catch(e){setSt('Microphone access denied');}
+  }
+
+  function stopRec(){
+    if(!recActive)return;
+    recActive=false;mb.classList.remove('tv-rec');setSt('');
+    if(micStream)micStream.getTracks().forEach(function(t){t.stop();});
+    if(processor){processor.disconnect();}
+    if(audioCtx&&audioCtx.state!=='closed')audioCtx.close();
+    if(!pcmBufs.length)return;
+    var wav=pcmToWav(pcmBufs,16000);
+    var audio=b64(wav);
+    addMsg('u','\uD83C\uDFA4 Voice message');
+    setWait(true);showTyp();
+    wsSend({type:'voice',audio:audio,lang:'auto'});
+    pcmBufs=[];
+  }
+
+  mb.addEventListener('mousedown',startRec);
+  mb.addEventListener('mouseup',stopRec);
+  mb.addEventListener('touchstart',function(e){e.preventDefault();startRec();},{passive:false});
+  mb.addEventListener('touchend',function(e){e.preventDefault();stopRec();},{passive:false});
+
+  /* ── UI helpers ────────────────────────────────────── */
+  function addMsg(role,text){
+    var w=document.createElement('div');w.className='tv-m tv-'+(role==='u'?'u':'b');
+    if(role!=='u'){var av=document.createElement('div');av.className='tv-mav';av.textContent='\uD83C\uDFA4';w.appendChild(av);}
+    var b2=document.createElement('div');b2.className='tv-mb';b2.textContent=text;w.appendChild(b2);
+    msgs.appendChild(w);msgs.scrollTop=msgs.scrollHeight;return w;
+  }
+
+  function showTyp(){
+    removeTyp();
+    var w=document.createElement('div');w.className='tv-m tv-b';w.id='tv-typ';
+    var av=document.createElement('div');av.className='tv-mav';av.textContent='\uD83C\uDFA4';
+    var b2=document.createElement('div');b2.className='tv-mb tv-typ';
+    b2.innerHTML='<span></span><span></span><span></span>';
+    w.appendChild(av);w.appendChild(b2);msgs.appendChild(w);msgs.scrollTop=msgs.scrollHeight;
+  }
+  function removeTyp(){var t=document.getElementById('tv-typ');if(t)t.remove();}
+
+  function showBtns(btns){
+    var row=document.createElement('div');row.className='tv-abts';
+    btns.forEach(function(b2){
+      var btn=document.createElement('button');btn.className='tv-abt';btn.textContent=b2.lbl;
+      btn.onclick=b2.fn;row.appendChild(btn);
+    });
+    msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
+  }
+
+  function showApptForm(pre){
+    var f=document.createElement('div');f.className='tv-form';
+    f.innerHTML='<input id="tv-fn" placeholder="Your name" value="'+(pre.name||'')+'"/>'
+      +'<input id="tv-fp" placeholder="Phone number" value="'+(pre.phone||'')+'"/>'
+      +'<input id="tv-ft" placeholder="Preferred time (e.g. Tomorrow 3pm)" value="'+(pre.time||'')+'"/>'
+      +'<button>\uD83D\uDCDE Book Callback</button>';
+    f.querySelector('button').onclick=async function(){
+      var n=f.querySelector('#tv-fn').value.trim(),p=f.querySelector('#tv-fp').value.trim(),t=f.querySelector('#tv-ft').value.trim();
+      if(!n||!p||!t){alert('Please fill all fields');return;}
+      try{
+        await fetch(BOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:n,phone:p,time:t,source:'chatbot-form'})});
+        f.remove();addMsg('b','\u2705 Booked! We\u2019ll call '+n+' around '+t+'.');
+      }catch(e){addMsg('b','Something went wrong \u2014 please try again.');}
+    };
+    msgs.appendChild(f);msgs.scrollTop=msgs.scrollHeight;
+  }
+
+  function showEmailForm(pre){
+    var f=document.createElement('div');f.className='tv-form';
+    f.innerHTML='<input id="tv-fen" placeholder="Your name" value="'+(pre.name||'')+'"/>'
+      +'<input id="tv-fee" placeholder="Email address" value="'+(pre.email||'')+'"/>'
+      +'<button>\u2709\uFE0F Send Request</button>';
+    f.querySelector('button').onclick=async function(){
+      var n=f.querySelector('#tv-fen').value.trim(),e=f.querySelector('#tv-fee').value.trim();
+      if(!n||!e){alert('Please fill all fields');return;}
+      try{
+        await fetch(BOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:n,email:e,source:'chatbot-email-form'})});
+        f.remove();addMsg('b','\u2705 Got it! We\u2019ll email '+n+' at '+e+' within 24 hours.');
+      }catch(e2){addMsg('b','Something went wrong \u2014 please try again.');}
+    };
+    msgs.appendChild(f);msgs.scrollTop=msgs.scrollHeight;
+  }
+
+  function setWait(v){waiting=v;ti.disabled=v;sb.disabled=v;mb.disabled=v;if(!v)setSt('');}
+  function setSt(m){st.textContent=m;}
+})();
+</script>
 </body></html>
