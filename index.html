@@ -998,23 +998,29 @@
 #tv-slbl{font-size:11px;text-transform:uppercase;letter-spacing:.15em;
   color:rgba(115,92,0,.55);font-weight:600}
 
-/* mic button */
-#tv-mic{width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;
-  background:linear-gradient(135deg,#735C00 0%,#D4AF37 100%);
+/* subtitle */
+#tv-tsub{font-size:12px;color:#a09070;margin-top:-10px}
+
+/* call button (green, idle) */
+#tv-call-btn{width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#27ae60,#2ecc71);
   display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;
   transition:transform .2s,box-shadow .2s;
-  box-shadow:0 6px 24px rgba(212,175,55,.45)}
-#tv-mic:hover{transform:scale(1.07)}
-#tv-mic.tv-mic-rec{background:linear-gradient(135deg,#c0392b,#e74c3c);
-  animation:tv-mic-rec 1s ease-in-out infinite;box-shadow:0 6px 24px rgba(231,76,60,.45)}
-#tv-mic:disabled{opacity:.45;cursor:default;transform:none;animation:none}
+  box-shadow:0 6px 24px rgba(39,174,96,.45)}
+#tv-call-btn:hover{transform:scale(1.07)}
 
-/* ctrl row */
-#tv-ctr{display:flex;gap:20px;align-items:center}
-.tv-cbtn{width:40px;height:40px;border-radius:50%;border:1px solid rgba(212,175,55,.22);
-  background:rgba(212,175,55,.05);cursor:pointer;font-size:20px;color:#a09070;
+/* in-call row */
+#tv-idle-row{display:flex;align-items:center;justify-content:center}
+#tv-incall-row{display:none;gap:28px;align-items:center;justify-content:center}
+.tv-cbtn{width:44px;height:44px;border-radius:50%;border:1px solid rgba(212,175,55,.22);
+  background:rgba(212,175,55,.05);cursor:pointer;font-size:22px;color:#a09070;
   display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
 .tv-cbtn:hover{background:rgba(212,175,55,.15);color:#735C00}
+#tv-end{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#c0392b,#e74c3c);font-size:26px;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 18px rgba(192,57,43,.45);transition:transform .2s}
+#tv-end:hover{transform:scale(1.07)}
 
 /* ── Mobile ── */
 @media(max-width:480px){
@@ -1075,11 +1081,16 @@
     </div>
     <div id="tv-bars"><span></span><span></span><span></span><span></span><span></span></div>
     <div id="tv-tx"></div>
-    <div id="tv-slbl">Tap to speak</div>
-    <button id="tv-mic" class="tv-ms" aria-label="Start recording" style="font-variation-settings:'FILL' 1">mic</button>
-    <div id="tv-ctr">
-      <button class="tv-cbtn tv-ms" id="tv-mute" aria-label="Mute" style="font-variation-settings:'FILL' 0">volume_up</button>
-      <button class="tv-cbtn tv-ms" id="tv-end" aria-label="End" style="font-variation-settings:'FILL' 1">call_end</button>
+    <div id="tv-slbl">Talk to Talktiv AI</div>
+    <div id="tv-tsub">Press call to start</div>
+    <!-- State A: idle — green call button -->
+    <div id="tv-idle-row">
+      <button id="tv-call-btn" class="tv-ms" aria-label="Start call" style="font-variation-settings:'FILL' 1">call</button>
+    </div>
+    <!-- State B: in-call — mute + hang-up -->
+    <div id="tv-incall-row">
+      <button class="tv-cbtn tv-ms" id="tv-mute" aria-label="Mute mic" style="font-variation-settings:'FILL' 0">mic</button>
+      <button id="tv-end" class="tv-ms" aria-label="End call" style="font-variation-settings:'FILL' 1">call_end</button>
     </div>
   </div>
 
@@ -1109,15 +1120,18 @@ var bubble  = document.getElementById('tv-bubble'),
     sb      = document.getElementById('tv-sb'),
     mb2     = document.getElementById('tv-mb2'),
     cst     = document.getElementById('tv-cst'),
-    orb     = document.getElementById('tv-orb'),
-    ring    = document.getElementById('tv-ring'),
-    spinEl  = document.getElementById('tv-spin'),
-    bars    = document.getElementById('tv-bars'),
-    tx      = document.getElementById('tv-tx'),
-    slbl    = document.getElementById('tv-slbl'),
-    micBtn  = document.getElementById('tv-mic'),
-    muteBtn = document.getElementById('tv-mute'),
-    endBtn  = document.getElementById('tv-end');
+    orb      = document.getElementById('tv-orb'),
+    ring     = document.getElementById('tv-ring'),
+    spinEl   = document.getElementById('tv-spin'),
+    bars     = document.getElementById('tv-bars'),
+    tx       = document.getElementById('tv-tx'),
+    slbl     = document.getElementById('tv-slbl'),
+    tsubEl   = document.getElementById('tv-tsub'),
+    callBtn  = document.getElementById('tv-call-btn'),
+    idleRow  = document.getElementById('tv-idle-row'),
+    incallRow= document.getElementById('tv-incall-row'),
+    muteBtn  = document.getElementById('tv-mute'),
+    endBtn   = document.getElementById('tv-end');
 
 /* ── State ── */
 var isOpen=false, mode='chat', greeted=false;
@@ -1126,8 +1140,12 @@ var ws, wsOk=false, wsQ=[];
 var waiting=false, recActive=false;
 var audioCtx, micStream, processor, pcmBufs=[];
 /* talk */
-var orbState='idle', talkRec=false, talkMuted=false;
-var mediaRec, mediaChunks=[], silTimer=null, talkCtx=null;
+var orbState='idle', callState='idle';
+var isMuted=false, isAIPlaying=false;
+var vadStream=null, vadCtx=null, vadProcessor=null;
+var isRecording=false, recordChunks=[], vadMediaRec=null;
+var VAD_THRESHOLD=0.015, SILENCE_MS=1200, silenceTimer=null;
+var talkCtx=null;
 
 /* ══ WebSocket ══ */
 function connect(){
@@ -1307,7 +1325,7 @@ function setWait(v){waiting=v;ti.disabled=v;sb.disabled=v;mb2.disabled=v;if(!v)s
 function setCst(m){cst.textContent=m;}
 
 /* ══════════════════════════════════════════════
-   TALK MODE
+   TALK MODE — continuous call with VAD
 ══════════════════════════════════════════════ */
 function setOrbState(s){
   orbState=s;
@@ -1315,139 +1333,201 @@ function setOrbState(s){
   ring.classList.toggle('tv-ring-on',s==='listening');
   spinEl.classList.toggle('tv-spin-on',s==='processing');
   bars.classList.toggle('tv-bars-on',s==='speaking');
-  var lbl={idle:'Tap to speak',listening:'Listening...',processing:'Thinking...',speaking:'Speaking...'};
-  slbl.textContent=lbl[s]||'';
-  micBtn.disabled=(s==='processing');
-}
-
-function handleTalkMsg(d){
-  micBtn.disabled=false;
-  if(d.type==='tts_audio'){
-    if(d.transcript)tx.textContent=d.transcript;
-    playB64Audio(d.audio);
-  }else if(d.type==='text'||d.type==='error'){
-    var txt=d.message||'';
-    if(txt)tx.textContent=txt;
-    talkMuted?setOrbState('idle'):speakText(txt);
+  if(callState==='incall'){
+    var lbl={idle:'Ready',listening:'Listening...',processing:'Thinking...',speaking:'Speaking...'};
+    slbl.textContent=lbl[s]||'';
   }
 }
 
+function setCallState(cs){
+  callState=cs;
+  idleRow.style.display=cs==='idle'?'flex':'none';
+  incallRow.style.display=cs==='incall'?'flex':'none';
+  if(cs==='idle'){
+    slbl.textContent='Talk to Talktiv AI';
+    tsubEl.textContent='Press call to start';tsubEl.style.display='';
+    setOrbState('idle');
+  }else{
+    tsubEl.style.display='none';
+    setOrbState('listening');
+  }
+}
+
+function handleTalkMsg(d){
+  if(d.type==='tts_audio'){
+    if(d.transcript)showWordByWord(d.transcript);
+    playB64Audio(d.audio);
+  }else if(d.type==='text'||d.type==='error'){
+    var txt=d.message||'';
+    if(txt)showWordByWord(txt);
+    if(isMuted||!txt){setOrbState(callState==='incall'?'listening':'idle');}
+    else speakText(txt);
+  }
+}
+
+function showWordByWord(text){
+  tx.textContent='';
+  var words=text.split(' '),i=0;
+  function next(){if(i<words.length){tx.textContent+=(i>0?' ':'')+words[i++];setTimeout(next,80);}}
+  next();
+}
+
 async function playB64Audio(b64){
+  isAIPlaying=true;
   try{
     var bin=atob(b64),bytes=new Uint8Array(bin.length);
     for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
     var ctx=new AudioContext();talkCtx=ctx;
     var buf=await ctx.decodeAudioData(bytes.buffer);
-    var src=ctx.createBufferSource();
-    src.buffer=buf;
-    if(talkMuted){var g=ctx.createGain();g.gain.value=0;src.connect(g);g.connect(ctx.destination);}
-    else{src.connect(ctx.destination);}
+    var src=ctx.createBufferSource();src.buffer=buf;
+    if(isMuted){var g=ctx.createGain();g.gain.value=0;src.connect(g);g.connect(ctx.destination);}
+    else src.connect(ctx.destination);
     setOrbState('speaking');
-    src.onended=function(){setOrbState('idle');ctx.close();};
+    src.onended=function(){
+      isAIPlaying=false;ctx.close();
+      if(callState==='incall')setOrbState('listening');else setOrbState('idle');
+    };
     src.start();
-  }catch(e){console.error('[Talktiv Talk] audio',e);setOrbState('idle');}
+  }catch(e){
+    console.error('[Talktiv Talk] audio',e);
+    isAIPlaying=false;
+    if(callState==='incall')setOrbState('listening');else setOrbState('idle');
+  }
 }
 
 function speakText(text){
   var ss=window.speechSynthesis;
-  if(!ss||!text){setOrbState('idle');return;}
-  ss.cancel();
+  if(!ss||!text){if(callState==='incall')setOrbState('listening');else setOrbState('idle');return;}
+  isAIPlaying=true;ss.cancel();
   var u=new SpeechSynthesisUtterance(text);
   u.lang='en-IN';u.rate=0.95;u.pitch=1.0;
   var vox=ss.getVoices();
   var pref=vox.find(function(v){return v.lang.includes('en-IN')||v.lang.includes('hi-IN');});
   if(pref)u.voice=pref;
-  u.onstart=function(){setOrbState('speaking');};
-  u.onend=function(){setOrbState('idle');};
-  u.onerror=function(){setOrbState('idle');};
+  u.onend=function(){isAIPlaying=false;if(callState==='incall')setOrbState('listening');else setOrbState('idle');};
+  u.onerror=function(){isAIPlaying=false;if(callState==='incall')setOrbState('listening');else setOrbState('idle');};
   setOrbState('speaking');ss.speak(u);
 }
 
-micBtn.addEventListener('click',function(){talkRec?stopTalkRec():startTalkRec();});
-
+/* ── WAV conversion (reused by VAD send) ── */
 async function convertToWav(webmBlob){
   var arrayBuffer=await webmBlob.arrayBuffer();
-  var audioCtx=new AudioContext({sampleRate:16000});
-  var decoded=await audioCtx.decodeAudioData(arrayBuffer);
+  var ac=new AudioContext({sampleRate:16000});
+  var decoded=await ac.decodeAudioData(arrayBuffer);
   var samples=decoded.getChannelData(0);
   var pcm=new Int16Array(samples.length);
-  for(var i=0;i<samples.length;i++){
-    pcm[i]=Math.max(-32768,Math.min(32767,Math.round(samples[i]*32767)));
-  }
+  for(var i=0;i<samples.length;i++)pcm[i]=Math.max(-32768,Math.min(32767,Math.round(samples[i]*32767)));
   var wavBuffer=new ArrayBuffer(44+pcm.byteLength);
   var view=new DataView(wavBuffer);
   function wr(offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));}
   wr(0,'RIFF');view.setUint32(4,36+pcm.byteLength,true);
   wr(8,'WAVE');wr(12,'fmt ');
-  view.setUint32(16,16,true);view.setUint16(20,1,true);
-  view.setUint16(22,1,true);view.setUint32(24,16000,true);
-  view.setUint32(28,32000,true);view.setUint16(32,2,true);
-  view.setUint16(34,16,true);wr(36,'data');
-  view.setUint32(40,pcm.byteLength,true);
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);
+  view.setUint32(24,16000,true);view.setUint32(28,32000,true);
+  view.setUint16(32,2,true);view.setUint16(34,16,true);
+  wr(36,'data');view.setUint32(40,pcm.byteLength,true);
   new Int16Array(wavBuffer,44).set(pcm);
-  await audioCtx.close();
+  await ac.close();
   return wavBuffer;
 }
 
-async function startTalkRec(){
-  if(talkRec||orbState==='processing')return;
-  if(talkCtx){try{talkCtx.close();}catch(e){}}
-  if(window.speechSynthesis)window.speechSynthesis.cancel();
-  try{
-    var stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    var mime='audio/webm;codecs=opus';
-    if(!MediaRecorder.isTypeSupported(mime))mime='audio/webm';
-    if(!MediaRecorder.isTypeSupported(mime))mime='';
-    mediaRec=new MediaRecorder(stream,mime?{mimeType:mime}:{});
-    mediaChunks=[];
-    mediaRec.ondataavailable=function(e){if(e.data&&e.data.size>0)mediaChunks.push(e.data);};
-    mediaRec.onstop=async function(){
-      stream.getTracks().forEach(function(t){t.stop();});
-      var blob=new Blob(mediaChunks,{type:mediaRec.mimeType||'audio/webm'});
-      try{
-        var wavBuffer=await convertToWav(blob);
-        var wavBytes=new Uint8Array(wavBuffer);
-        var b64='',chunkSize=8192;
-        for(var i=0;i<wavBytes.length;i+=chunkSize){
-          b64+=String.fromCharCode.apply(null,wavBytes.subarray(i,i+chunkSize));
-        }
-        b64=btoa(b64);
-        setOrbState('processing');tx.textContent='';
-        wsSend({type:'voice_input',audio:b64,mime:'audio/wav',lang:'auto'});
-      }catch(e2){
-        console.error('[Talktiv Talk] WAV convert',e2);
-        setOrbState('idle');slbl.textContent='Audio error \u2014 try again';
-      }
-    };
-    mediaRec.start();talkRec=true;
-    micBtn.classList.add('tv-mic-rec');micBtn.textContent='stop_circle';
-    setOrbState('listening');tx.textContent='';
-    silTimer=setTimeout(function(){if(talkRec)stopTalkRec();},30000);
-  }catch(e){
-    console.error('[Talktiv Talk]',e);
-    slbl.textContent='Microphone denied';setOrbState('idle');
+/* ── VAD pipeline ── */
+function onAudioProcess(e){
+  if(isMuted||isAIPlaying)return;
+  var data=e.inputBuffer.getChannelData(0),sum=0;
+  for(var i=0;i<data.length;i++)sum+=data[i]*data[i];
+  var rms=Math.sqrt(sum/data.length);
+  if(rms>VAD_THRESHOLD){
+    clearTimeout(silenceTimer);silenceTimer=null;
+    if(!isRecording)startVadRecording();
+  }else if(isRecording&&!silenceTimer){
+    silenceTimer=setTimeout(stopAndSend,SILENCE_MS);
   }
 }
-function stopTalkRec(){
-  if(!talkRec)return;
-  talkRec=false;
-  if(silTimer){clearTimeout(silTimer);silTimer=null;}
-  micBtn.classList.remove('tv-mic-rec');micBtn.textContent='mic';
-  if(mediaRec&&mediaRec.state!=='inactive')mediaRec.stop();
+
+function startVadRecording(){
+  isRecording=true;recordChunks=[];
+  var mime='audio/webm;codecs=opus';
+  if(!MediaRecorder.isTypeSupported(mime))mime='audio/webm';
+  vadMediaRec=new MediaRecorder(vadStream,mime?{mimeType:mime}:{});
+  vadMediaRec.ondataavailable=function(e){if(e.data&&e.data.size>0)recordChunks.push(e.data);};
+  vadMediaRec.start(100);
 }
 
-muteBtn.addEventListener('click',function(){
-  talkMuted=!talkMuted;
-  muteBtn.textContent=talkMuted?'volume_off':'volume_up';
-  muteBtn.style.color=talkMuted?'#c0392b':'';
-  if(talkMuted&&window.speechSynthesis)window.speechSynthesis.cancel();
-});
-endBtn.addEventListener('click',function(){
-  if(talkRec)stopTalkRec();
+async function stopAndSend(){
+  if(!isRecording||!vadMediaRec)return;
+  clearTimeout(silenceTimer);silenceTimer=null;
+  isRecording=false;
+  setOrbState('processing');
+  if(vadMediaRec.state!=='inactive')vadMediaRec.stop();
+  vadMediaRec.onstop=async function(){
+    var blob=new Blob(recordChunks,{type:vadMediaRec.mimeType||'audio/webm'});
+    try{
+      var wavBuf=await convertToWav(blob);
+      var bytes=new Uint8Array(wavBuf),b64='';
+      for(var i=0;i<bytes.length;i+=8192)
+        b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
+      b64=btoa(b64);
+      wsSend({type:'voice_input',audio:b64,mime:'audio/wav',lang:'auto'});
+    }catch(err){
+      console.error('[Talktiv VAD] WAV convert',err);
+      if(callState==='incall')setOrbState('listening');
+    }
+  };
+}
+
+/* ── Call start / end ── */
+async function startCall(){
+  try{
+    connect();
+    vadStream=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,sampleRate:16000}
+    });
+    vadCtx=new AudioContext({sampleRate:16000});
+    var src=vadCtx.createMediaStreamSource(vadStream);
+    vadProcessor=vadCtx.createScriptProcessor(512,1,1);
+    src.connect(vadProcessor);vadProcessor.connect(vadCtx.destination);
+    vadProcessor.onaudioprocess=onAudioProcess;
+    setCallState('incall');
+    wsSend({type:'call_start'});
+  }catch(e){
+    console.error('[Talktiv] startCall',e);
+    slbl.textContent='Microphone denied';
+  }
+}
+
+function endCall(){
+  if(isRecording&&vadMediaRec&&vadMediaRec.state!=='inactive')vadMediaRec.stop();
+  isRecording=false;isAIPlaying=false;
+  clearTimeout(silenceTimer);silenceTimer=null;
+  if(vadProcessor){try{vadProcessor.disconnect();}catch(e){}}
+  if(vadCtx&&vadCtx.state!=='closed'){try{vadCtx.close();}catch(e){}}
+  if(vadStream)vadStream.getTracks().forEach(function(t){t.stop();});
   if(talkCtx){try{talkCtx.close();}catch(e){}}
   if(window.speechSynthesis)window.speechSynthesis.cancel();
-  setOrbState('idle');tx.textContent='';micBtn.disabled=false;
+  vadStream=null;vadCtx=null;vadProcessor=null;vadMediaRec=null;
+  try{if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'call_end',session_id:SID}));}catch(e){}
+  callState='idle';
+  orb.className='tv-orb-idle';ring.classList.remove('tv-ring-on');
+  spinEl.classList.remove('tv-spin-on');bars.classList.remove('tv-bars-on');
+  slbl.textContent='Call ended';tsubEl.textContent='';tsubEl.style.display='';
+  idleRow.style.display='none';incallRow.style.display='none';tx.textContent='';
+  setTimeout(function(){
+    slbl.textContent='Talk to Talktiv AI';
+    tsubEl.textContent='Press call to start';
+    idleRow.style.display='flex';
+    isMuted=false;muteBtn.textContent='mic';muteBtn.style.color='';
+  },2000);
+}
+
+callBtn.addEventListener('click',function(){startCall();});
+muteBtn.addEventListener('click',function(){
+  isMuted=!isMuted;
+  muteBtn.textContent=isMuted?'mic_off':'mic';
+  muteBtn.style.color=isMuted?'#c0392b':'';
+  if(isMuted&&window.speechSynthesis)window.speechSynthesis.cancel();
 });
+endBtn.addEventListener('click',function(){endCall();});
 
 })();
 </script>
