@@ -1063,6 +1063,12 @@
     <button class="tv-tab" id="tv-tt">Talk</button>
   </div>
 
+  <!-- Consent disclaimer (one-time) -->
+  <div id="tv-disclaimer" style="margin:8px 12px;padding:8px 12px;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:8px;font-family:Manrope,sans-serif;font-size:11px;color:rgba(115,92,0,0.7);line-height:1.5;flex-shrink:0;">
+    By continuing, you consent to this conversation being processed to provide assistance. We collect only name, phone, and email when voluntarily provided for callback purposes.
+    <span style="cursor:pointer;font-weight:700;margin-left:4px;" onclick="document.getElementById('tv-disclaimer').style.display='none';tvDisclaimerDismissed=true;">Got it ✕</span>
+  </div>
+
   <!-- Chat panel -->
   <div id="tv-cp">
     <div id="tv-msgs"></div>
@@ -1138,7 +1144,7 @@ var bubble  = document.getElementById('tv-bubble'),
     endBtn   = document.getElementById('tv-end');
 
 /* ── State ── */
-var isOpen=false, mode='chat', greeted=false;
+var isOpen=false, mode='chat', greeted=false, tvDisclaimerDismissed=false;
 var ws, wsOk=false, wsQ=[];
 /* chat */
 var waiting=false, recActive=false;
@@ -1483,6 +1489,9 @@ async function stopAndSend(){
 /* ── Call start / end ── */
 async function startCall(){
   try{
+    // Close any stale WebSocket before opening a fresh one
+    if(ws&&ws.readyState!==WebSocket.CLOSED){ws.close();ws=null;wsOk=false;}
+    await new Promise(function(r){setTimeout(r,200);});
     connect();
     vadStream=await navigator.mediaDevices.getUserMedia({
       audio:{echoCancellation:true,noiseSuppression:true,sampleRate:16000}
