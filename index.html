@@ -1365,6 +1365,30 @@ function speakText(text){
 
 micBtn.addEventListener('click',function(){talkRec?stopTalkRec():startTalkRec();});
 
+async function convertToWav(webmBlob){
+  var arrayBuffer=await webmBlob.arrayBuffer();
+  var audioCtx=new AudioContext({sampleRate:16000});
+  var decoded=await audioCtx.decodeAudioData(arrayBuffer);
+  var samples=decoded.getChannelData(0);
+  var pcm=new Int16Array(samples.length);
+  for(var i=0;i<samples.length;i++){
+    pcm[i]=Math.max(-32768,Math.min(32767,Math.round(samples[i]*32767)));
+  }
+  var wavBuffer=new ArrayBuffer(44+pcm.byteLength);
+  var view=new DataView(wavBuffer);
+  function wr(offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));}
+  wr(0,'RIFF');view.setUint32(4,36+pcm.byteLength,true);
+  wr(8,'WAVE');wr(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);
+  view.setUint16(22,1,true);view.setUint32(24,16000,true);
+  view.setUint32(28,32000,true);view.setUint16(32,2,true);
+  view.setUint16(34,16,true);wr(36,'data');
+  view.setUint32(40,pcm.byteLength,true);
+  new Int16Array(wavBuffer,44).set(pcm);
+  await audioCtx.close();
+  return wavBuffer;
+}
+
 async function startTalkRec(){
   if(talkRec||orbState==='processing')return;
   if(talkCtx){try{talkCtx.close();}catch(e){}}
@@ -1377,17 +1401,23 @@ async function startTalkRec(){
     mediaRec=new MediaRecorder(stream,mime?{mimeType:mime}:{});
     mediaChunks=[];
     mediaRec.ondataavailable=function(e){if(e.data&&e.data.size>0)mediaChunks.push(e.data);};
-    mediaRec.onstop=function(){
-      var blob=new Blob(mediaChunks,{type:mediaRec.mimeType||'audio/webm'});
-      var fr=new FileReader();
-      fr.onload=function(){
-        var b64=fr.result.split(',')[1];
-        setOrbState('processing');
-        tx.textContent='';
-        wsSend({type:'voice_input',audio:b64,mime:blob.type,lang:'auto'});
-      };
-      fr.readAsDataURL(blob);
+    mediaRec.onstop=async function(){
       stream.getTracks().forEach(function(t){t.stop();});
+      var blob=new Blob(mediaChunks,{type:mediaRec.mimeType||'audio/webm'});
+      try{
+        var wavBuffer=await convertToWav(blob);
+        var wavBytes=new Uint8Array(wavBuffer);
+        var b64='',chunkSize=8192;
+        for(var i=0;i<wavBytes.length;i+=chunkSize){
+          b64+=String.fromCharCode.apply(null,wavBytes.subarray(i,i+chunkSize));
+        }
+        b64=btoa(b64);
+        setOrbState('processing');tx.textContent='';
+        wsSend({type:'voice_input',audio:b64,mime:'audio/wav',lang:'auto'});
+      }catch(e2){
+        console.error('[Talktiv Talk] WAV convert',e2);
+        setOrbState('idle');slbl.textContent='Audio error \u2014 try again';
+      }
     };
     mediaRec.start();talkRec=true;
     micBtn.classList.add('tv-mic-rec');micBtn.textContent='stop_circle';
