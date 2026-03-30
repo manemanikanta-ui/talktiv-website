@@ -931,9 +931,13 @@
 #tv-inp{padding:10px 12px;border-top:1px solid rgba(212,175,55,.1);
   background:rgba(252,249,248,.9);flex-shrink:0}
 #tv-row{display:flex;gap:8px;align-items:center}
+#tv-win,#tv-win *{cursor:default}
+#tv-win button,#tv-win [role=button],.tv-ib{cursor:pointer!important}
+#tv-win input,#tv-win textarea{cursor:text!important}
 #tv-ti{flex:1;background:#fff;border:1px solid rgba(212,175,55,.25);color:#2c2410;
   border-radius:24px;padding:9px 15px;font-size:13.5px;
-  font-family:'Manrope','Inter',sans-serif;outline:none;transition:border-color .15s}
+  font-family:'Manrope','Inter',sans-serif;outline:none;transition:border-color .15s;
+  caret-color:#735C00}
 #tv-ti:focus{border-color:#D4AF37}
 #tv-ti::placeholder{color:#a09070}
 #tv-ti:disabled{opacity:.45}
@@ -996,7 +1000,7 @@
 
 /* state label */
 #tv-slbl{font-size:11px;text-transform:uppercase;letter-spacing:.15em;
-  color:rgba(115,92,0,.55);font-weight:600}
+  color:rgba(115,92,0,.75);font-weight:600}
 
 /* subtitle */
 #tv-tsub{font-size:12px;color:#a09070;margin-top:-10px}
