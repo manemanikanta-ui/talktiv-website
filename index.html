@@ -1158,6 +1158,7 @@ var audioCtx, micStream, processor, pcmBufs=[];
 /* talk */
 var orbState='idle', callState='idle';
 var isMuted=false, isAIPlaying=false;
+var tvAudioQueue=[], tvIsPlaying=false;
 var vadStream=null, vadCtx=null, vadProcessor=null;
 var isRecording=false, recordChunks=[], vadMediaRec=null;
 var VAD_THRESHOLD=0.015, SILENCE_MS=1200, silenceTimer=null;
@@ -1370,14 +1371,60 @@ function setCallState(cs){
 }
 
 function handleTalkMsg(d){
-  if(d.type==='tts_audio'){
+  if(d.type==='thinking'){
+    setOrbState('processing');
+    tx.textContent='';
+
+  }else if(d.type==='tts_chunk'){
+    // Append transcript as chunks arrive
+    if(d.transcript)tx.textContent+=(tx.textContent?' ':'')+d.transcript;
+    tvAudioQueue.push({audio:d.audio, isFirst:d.is_first, isFinal:false});
+    if(!tvIsPlaying)playNextChunk();
+
+  }else if(d.type==='tts_done'){
+    // Sentinel — when drained, return to listening
+    tvAudioQueue.push({audio:null, isFinal:true});
+    if(!tvIsPlaying)playNextChunk();
+
+  }else if(d.type==='tts_audio'){
+    // Backward compat — single audio blob from old server
     if(d.transcript)showWordByWord(d.transcript);
-    playB64Audio(d.audio);
+    tvAudioQueue.push({audio:d.audio, isFirst:true, isFinal:false});
+    tvAudioQueue.push({audio:null, isFinal:true});
+    if(!tvIsPlaying)playNextChunk();
+
   }else if(d.type==='text'||d.type==='error'){
     var txt=d.message||'';
     if(txt)showWordByWord(txt);
     if(isMuted||!txt){setOrbState(callState==='incall'?'listening':'idle');}
     else speakText(txt);
+  }
+}
+
+async function playNextChunk(){
+  if(tvAudioQueue.length===0){tvIsPlaying=false;return;}
+  var chunk=tvAudioQueue.shift();
+  if(chunk.isFinal){
+    tvIsPlaying=false;
+    isAIPlaying=false;
+    if(callState==='incall')setOrbState('listening');else setOrbState('idle');
+    return;
+  }
+  tvIsPlaying=true;
+  if(chunk.isFirst){setOrbState('speaking');isAIPlaying=true;}
+  try{
+    var bin=atob(chunk.audio),bytes=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    var ctx=new AudioContext();talkCtx=ctx;
+    var buf=await ctx.decodeAudioData(bytes.buffer);
+    var src=ctx.createBufferSource();src.buffer=buf;
+    if(isMuted){var g=ctx.createGain();g.gain.value=0;src.connect(g);g.connect(ctx.destination);}
+    else src.connect(ctx.destination);
+    src.onended=function(){ctx.close();playNextChunk();};
+    src.start();
+  }catch(e){
+    console.error('[Talktiv] chunk',e);
+    playNextChunk(); // skip bad chunk, continue
   }
 }
 
@@ -1389,26 +1436,10 @@ function showWordByWord(text){
 }
 
 async function playB64Audio(b64){
-  isAIPlaying=true;
-  try{
-    var bin=atob(b64),bytes=new Uint8Array(bin.length);
-    for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-    var ctx=new AudioContext();talkCtx=ctx;
-    var buf=await ctx.decodeAudioData(bytes.buffer);
-    var src=ctx.createBufferSource();src.buffer=buf;
-    if(isMuted){var g=ctx.createGain();g.gain.value=0;src.connect(g);g.connect(ctx.destination);}
-    else src.connect(ctx.destination);
-    setOrbState('speaking');
-    src.onended=function(){
-      isAIPlaying=false;ctx.close();
-      if(callState==='incall')setOrbState('listening');else setOrbState('idle');
-    };
-    src.start();
-  }catch(e){
-    console.error('[Talktiv Talk] audio',e);
-    isAIPlaying=false;
-    if(callState==='incall')setOrbState('listening');else setOrbState('idle');
-  }
+  // Legacy wrapper — kept for safety
+  tvAudioQueue.push({audio:b64, isFirst:true, isFinal:false});
+  tvAudioQueue.push({audio:null, isFinal:true});
+  if(!tvIsPlaying)playNextChunk();
 }
 
 function speakText(text){
@@ -1517,7 +1548,7 @@ async function startCall(){
 
 function endCall(){
   if(isRecording&&vadMediaRec&&vadMediaRec.state!=='inactive')vadMediaRec.stop();
-  isRecording=false;isAIPlaying=false;
+  isRecording=false;isAIPlaying=false;tvAudioQueue=[];tvIsPlaying=false;
   clearTimeout(silenceTimer);silenceTimer=null;
   if(vadProcessor){try{vadProcessor.disconnect();}catch(e){}}
   if(vadCtx&&vadCtx.state!=='closed'){try{vadCtx.close();}catch(e){}}
