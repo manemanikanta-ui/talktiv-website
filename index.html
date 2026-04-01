@@ -226,14 +226,39 @@
         .tl-entry.tl-visible { opacity: 1; transform: translateY(0); }
 
         /* 3D Flow cards */
-        .flow-card { transform-style: preserve-3d; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .flow-card:hover { transform: perspective(800px) rotateY(-5deg) rotateX(3deg) translateZ(10px); box-shadow: 8px 8px 24px rgba(212,175,55,0.2); }
-        @keyframes flow-dot { 0% { left: 0%; } 100% { left: 100%; } }
-        .flow-arrow { position: relative; flex: 0 0 40px; height: 2px; background: rgba(255,255,255,0.1); }
-        .flow-arrow::after { content: ''; position: absolute; width: 8px; height: 8px; background: #D4AF37; border-radius: 50%; top: 50%; transform: translateY(-50%); animation: flow-dot 1.5s linear infinite; }
+        .flow-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: default;
+        }
+        .flow-card:hover {
+            transform: perspective(800px) rotateY(-6deg) rotateX(4deg) translateZ(12px);
+            box-shadow: 6px 6px 20px rgba(212,175,55,0.25);
+        }
+        @keyframes flow-dot {
+            0% { left: 0%; opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { left: 100%; opacity: 0; }
+        }
+        .flow-arrow {
+            position: relative;
+            overflow: hidden;
+            flex: 0 0 40px;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            width: 10px; height: 10px;
+            background: #D4AF37;
+            border-radius: 50%;
+            top: 50%; transform: translateY(-50%);
+            animation: flow-dot 2s linear infinite;
+        }
 
         /* About card tilt */
-        .about-card { transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: default; }
+        .about-card { transition: transform 0.4s ease, box-shadow 0.3s ease; cursor: default; }
     </style>
 </head>
 <body class="selection:bg-primary-container selection:text-on-primary-container bg-background">
@@ -679,7 +704,10 @@
 </div>
 <p class="text-sm text-on-surface-variant leading-relaxed mb-3">Talktiv began when Manikanta watched his father — a Telugu-speaking real estate agent in Hyderabad — lose clients every week because of language barriers. That frustration became a mission: no Indian business should ever lose a customer because of language.</p>
 <p class="text-sm text-on-surface-variant leading-relaxed mb-3">After completing his Masters in Telecommunications in Melbourne, Manikanta returned to build the voice infrastructure layer for India — combining world-class AI with deep understanding of India's linguistic diversity.</p>
-<a href="mailto:manikanta.mane@talktivai.com" class="text-sm font-semibold hover:opacity-100 transition-opacity" style="color:#D4AF37;opacity:.8">manikanta.mane@talktivai.com</a>
+<div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+  <a href="mailto:manikanta.mane@talktivai.com" class="text-sm font-semibold hover:opacity-100 transition-opacity" style="color:#D4AF37;opacity:.8">manikanta.mane@talktivai.com</a>
+  <a href="https://www.linkedin.com/in/manikanta-mane-91b248225/" target="_blank" rel="noopener" class="text-sm font-semibold hover:opacity-100 transition-opacity" style="color:#D4AF37;opacity:.8">LinkedIn →</a>
+</div>
 </div>
 </div>
 <div class="relative h-[400px] md:h-[600px] flex items-center justify-center reveal-up">
@@ -742,7 +770,7 @@
 <div class="flex flex-col md:flex-row gap-10 md:gap-20">
 <div class="flex flex-col gap-4 font-body text-xs tracking-widest uppercase">
 <span class="text-white/40 mb-2">Connect</span>
-<a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://linkedin.com/in/manikanta-mane" target="_blank" rel="noopener">LinkedIn</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://www.linkedin.com/in/manikanta-mane-91b248225/" target="_blank" rel="noopener">LinkedIn</a>
 <a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://twitter.com/talktivai" target="_blank" rel="noopener">X (Twitter)</a>
 <a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://github.com/manemanikanta-ui" target="_blank" rel="noopener">GitHub</a>
 </div>
@@ -870,16 +898,16 @@
     document.querySelectorAll('.about-card').forEach(card => {
         card.addEventListener('mousemove', (e) => {
             const rect = card.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const rx = ((e.clientY - cy) / rect.height) * 14;
-            const ry = ((e.clientX - cx) / rect.width) * -14;
-            card.style.transform = `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.05)`;
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            card.style.transform = `perspective(600px) rotateY(${x * 18}deg) rotateX(${-y * 18}deg) translateZ(16px)`;
+            card.style.transition = 'none';
             card.style.zIndex = '50';
             card.style.boxShadow = '0 20px 40px rgba(212,175,55,0.25)';
         });
         card.addEventListener('mouseleave', () => {
             card.style.transform = '';
+            card.style.transition = 'transform 0.4s ease';
             card.style.zIndex = '';
             card.style.boxShadow = '';
         });
