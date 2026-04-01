@@ -220,6 +220,20 @@
             opacity: 1;
             margin-top: 1rem;
         }
+
+        /* Timeline scroll animation */
+        .tl-entry { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .tl-entry.tl-visible { opacity: 1; transform: translateY(0); }
+
+        /* 3D Flow cards */
+        .flow-card { transform-style: preserve-3d; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .flow-card:hover { transform: perspective(800px) rotateY(-5deg) rotateX(3deg) translateZ(10px); box-shadow: 8px 8px 24px rgba(212,175,55,0.2); }
+        @keyframes flow-dot { 0% { left: 0%; } 100% { left: 100%; } }
+        .flow-arrow { position: relative; flex: 0 0 40px; height: 2px; background: rgba(255,255,255,0.1); }
+        .flow-arrow::after { content: ''; position: absolute; width: 8px; height: 8px; background: #D4AF37; border-radius: 50%; top: 50%; transform: translateY(-50%); animation: flow-dot 1.5s linear infinite; }
+
+        /* About card tilt */
+        .about-card { transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: default; }
     </style>
 </head>
 <body class="selection:bg-primary-container selection:text-on-primary-container bg-background">
@@ -245,7 +259,7 @@
 <a class="nav-link text-on-surface-variant hover:text-primary transition-all duration-300" data-section="products" href="#products">Products</a>
 <a class="nav-link text-on-surface-variant hover:text-primary transition-all duration-300" data-section="about" href="#about">About</a>
 </div>
-<button class="bg-primary-container text-on-primary-container px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-primary-container/20">
+<button class="bg-primary-container text-on-primary-container px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-primary-container/20" onclick="document.querySelector('#contact').scrollIntoView({behavior:'smooth'})">
             Get Started
         </button>
 </div>
@@ -255,7 +269,7 @@
 <div class="absolute inset-0 z-0 hero-mesh opacity-30"></div>
 <div class="relative z-10 max-w-5xl px-6 text-center">
 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel mb-8 animate-float">
-<span class="text-secondary text-xs font-bold uppercase tracking-widest">🚀 Talktiv Translate</span>
+<span class="text-secondary text-xs font-bold uppercase tracking-widest">🚀 Talktiv VoIs</span>
 <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
 <span class="text-on-surface-variant text-xs">Live in Beta</span>
 </div>
@@ -267,10 +281,10 @@
             Experience the next frontier of communication. Breaking language barriers across India with high-fidelity, real-time AI understanding.
         </p>
 <div class="flex flex-col md:flex-row gap-4 justify-center">
-<button class="bg-primary text-on-primary px-10 py-4 rounded-full font-headline font-bold text-lg hover:shadow-[0_0_30px_rgba(197,192,255,0.4)] transition-all">
+<button class="bg-primary text-on-primary px-10 py-4 rounded-full font-headline font-bold text-lg hover:shadow-[0_0_30px_rgba(197,192,255,0.4)] transition-all" onclick="document.querySelector('#products').scrollIntoView({behavior:'smooth'})">
                 Explore products
             </button>
-<button class="px-10 py-4 rounded-full font-headline font-bold text-lg text-primary border border-outline-variant hover:bg-surface-variant/30 transition-all">
+<button class="px-10 py-4 rounded-full font-headline font-bold text-lg text-primary border border-outline-variant hover:bg-surface-variant/30 transition-all" onclick="document.querySelector('#how-it-works').scrollIntoView({behavior:'smooth'})">
                 See how it works
             </button>
 </div>
@@ -283,32 +297,58 @@
 <div class="max-w-7xl mx-auto px-6">
 <h2 class="font-headline text-4xl md:text-6xl font-bold mb-20 text-center reveal-up">The world's most advanced voice AI —<br/><span class="text-primary">now available to Indian businesses</span></h2>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-<!-- Left: Timeline -->
-<div class="relative pl-12 border-l-2 border-primary/20 space-y-16">
-<div class="absolute left-[-2px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary via-secondary to-transparent"></div>
-<div class="relative reveal-up">
-<div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary shadow-[0_0_15px_#C5C0FF]"></div>
-<span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-3 inline-block">2022</span>
-<h4 class="text-xl font-bold mb-2">Foundation Models</h4>
-<p class="text-on-surface-variant text-sm">Initial R&amp;D on deep-tech linguistics and India-specific acoustic modeling.</p>
+<!-- Left: Animated Timeline -->
+<div class="relative pl-12 tl-line-wrap" id="tl-container">
+<div class="absolute left-[-2px] top-0 w-[2px] bg-gradient-to-b from-primary via-secondary to-transparent tl-line" id="tl-line" style="height:0%;transition:height 0.8s ease"></div>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary shadow-[0_0_15px_#D4AF37]"></div>
+  <span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-3 inline-block" style="color:#D4AF37">2024 Q1</span>
+  <h4 class="text-xl font-bold mb-2">Foundation Models</h4>
+  <p class="text-on-surface-variant text-sm">Sarvam saarika STT + bulbul TTS trained natively on Indian languages — not English retrofits.</p>
 </div>
-<div class="relative reveal-up">
-<div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary/40"></div>
-<span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-3 inline-block">2024</span>
-<h4 class="text-xl font-bold mb-2">Regional Expansion</h4>
-<p class="text-on-surface-variant text-sm">Deploying localized models across 10+ major Indian dialects with high accuracy.</p>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary/60"></div>
+  <span class="px-3 py-1 bg-primary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#D4AF37">2024 Q3</span>
+  <h4 class="text-xl font-bold mb-2">Real-time Pipeline</h4>
+  <p class="text-on-surface-variant text-sm">Sub-second voice translation across 9 Indian languages — STT → Claude → TTS in under 1.5s.</p>
 </div>
-<div class="relative reveal-up">
-<div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary shadow-[0_0_20px_#C5C0FF]"></div>
-<span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-3 inline-block">Jan 2026</span>
-<h4 class="text-xl font-bold mb-2">Cognitive Voice Agent</h4>
-<p class="text-on-surface-variant text-sm">Launch of full-duplex autonomous voice agents for enterprise scale.</p>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-secondary/60"></div>
+  <span class="px-3 py-1 bg-primary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#D4AF37">2024 Q4</span>
+  <h4 class="text-xl font-bold mb-2">VAD Breakthrough</h4>
+  <p class="text-on-surface-variant text-sm">Human-like silence detection and echo prevention — no push-to-talk needed.</p>
 </div>
-<div class="relative reveal-up">
-<div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-outline-variant"></div>
-<span class="px-3 py-1 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full mb-3 inline-block">2026+</span>
-<h4 class="text-xl font-bold mb-2">Spatial Intelligence</h4>
-<p class="text-on-surface-variant text-sm">Integrating voice AI with physical space awareness and context-rich environment.</p>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-secondary shadow-[0_0_15px_rgba(104,219,174,0.5)]"></div>
+  <span class="px-3 py-1 bg-secondary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#68DBAE">2025 Q1</span>
+  <h4 class="text-xl font-bold mb-2">Talktiv VoIs Launches</h4>
+  <p class="text-on-surface-variant text-sm">First live product — voice-to-voice translation across 9 Indian languages, hands-free.</p>
+</div>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-secondary/40"></div>
+  <span class="px-3 py-1 bg-secondary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#68DBAE">2025 Q3</span>
+  <h4 class="text-xl font-bold mb-2">Voice Agents</h4>
+  <p class="text-on-surface-variant text-sm">AI answers calls, books appointments, handles queries — in the caller's own language.</p>
+</div>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary/40"></div>
+  <span class="px-3 py-1 bg-primary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#D4AF37">2025 Q4</span>
+  <h4 class="text-xl font-bold mb-2">Multi-tenant Platform</h4>
+  <p class="text-on-surface-variant text-sm">Each business gets their own AI agent with a custom knowledge base and brand voice.</p>
+</div>
+<div class="tl-entry relative" style="margin-bottom:2.5rem">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-surface border-4 border-primary shadow-[0_0_20px_#D4AF37]"></div>
+  <span class="px-3 py-1 bg-primary/10 text-xs font-bold rounded-full mb-3 inline-block" style="color:#D4AF37">2026 Q1</span>
+  <h4 class="text-xl font-bold mb-2">Enterprise Platform</h4>
+  <p class="text-on-surface-variant text-sm">WhatsApp + CRM integration, 9 languages, live — full multilingual voice agent platform.</p>
+</div>
+<div class="tl-entry relative">
+  <div class="absolute left-[-58px] top-1 w-8 h-8 rounded-full bg-primary shadow-[0_0_25px_#D4AF37] flex items-center justify-center">
+    <span class="text-background text-xs font-black">NOW</span>
+  </div>
+  <span class="px-3 py-1 text-xs font-bold rounded-full mb-3 inline-block" style="background:#D4AF37;color:#0C0D1A">2026 — Live</span>
+  <h4 class="text-xl font-bold mb-2">Enterprise Ready</h4>
+  <p class="text-on-surface-variant text-sm">Serving real businesses in Hyderabad — real estate, clinics, retail. Every call in the customer's language.</p>
 </div>
 </div>
 <!-- Right: Ecosystem Card -->
@@ -450,65 +490,59 @@
 </section>
 <!-- Section Divider -->
 <div class="section-divider"><div class="divider-diamond"></div></div>
-<!-- Section: How it Works (Upgraded) -->
+<!-- Section: How it Works -->
 <section class="py-24 md:py-40" id="how-it-works">
 <div class="max-w-7xl mx-auto px-6">
 <h2 class="font-headline text-4xl md:text-6xl font-bold mb-20 text-center reveal-up">From first word to full conversation —<br/><span class="text-secondary">in any language</span></h2>
-<div class="relative mb-20">
-<!-- Connector Line -->
-<div class="hidden md:block absolute top-1/2 left-[10%] right-[10%] h-[2px] bg-white/5 -translate-y-1/2 z-0">
-<div class="pipeline-connector" id="pipeline-progress" style="width: 20%;"></div>
-</div>
-<div class="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4 relative z-10">
-<!-- Step 1 -->
-<button class="pipeline-step active group text-center" id="step-1" onclick="activateStep(1)">
-<div class="step-icon w-16 h-16 mx-auto rounded-full bg-surface border-2 border-outline-variant flex items-center justify-center mb-4 transition-all duration-500">
-<span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">phone_in_talk</span>
-</div>
-<span class="block font-headline font-bold text-sm uppercase tracking-wider">Customer Calls</span>
-</button>
-<!-- Step 2 -->
-<button class="pipeline-step group text-center" id="step-2" onclick="activateStep(2)">
-<div class="step-icon w-16 h-16 mx-auto rounded-full bg-surface border-2 border-outline-variant flex items-center justify-center mb-4 transition-all duration-500">
-<span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">language</span>
-</div>
-<span class="block font-headline font-bold text-sm uppercase tracking-wider">Detection</span>
-</button>
-<!-- Step 3 -->
-<button class="pipeline-step group text-center" id="step-3" onclick="activateStep(3)">
-<div class="step-icon w-16 h-16 mx-auto rounded-full bg-surface border-2 border-outline-variant flex items-center justify-center mb-4 transition-all duration-500">
-<span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">neurology</span>
-</div>
-<span class="block font-headline font-bold text-sm uppercase tracking-wider">Intent Logic</span>
-</button>
-<!-- Step 4 -->
-<button class="pipeline-step group text-center" id="step-4" onclick="activateStep(4)">
-<div class="step-icon w-16 h-16 mx-auto rounded-full bg-surface border-2 border-outline-variant flex items-center justify-center mb-4 transition-all duration-500">
-<span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">forum</span>
-</div>
-<span class="block font-headline font-bold text-sm uppercase tracking-wider">Response</span>
-</button>
-<!-- Step 5 -->
-<button class="pipeline-step group text-center" id="step-5" onclick="activateStep(5)">
-<div class="step-icon w-16 h-16 mx-auto rounded-full bg-surface border-2 border-outline-variant flex items-center justify-center mb-4 transition-all duration-500">
-<span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">sync</span>
-</div>
-<span class="block font-headline font-bold text-sm uppercase tracking-wider">Continuity</span>
-</button>
-</div>
-</div>
-<div class="max-w-3xl mx-auto">
-<div class="glass-panel p-8 md:p-12 rounded-3xl" id="step-detail-panel">
-<div class="flex items-start gap-8">
-<div class="hidden md:block text-6xl font-headline font-black text-secondary/20" id="detail-number">01</div>
-<div>
-<h4 class="text-2xl font-headline font-bold mb-4" id="detail-title">Seamless Inbound Access</h4>
-<p class="text-on-surface-variant leading-relaxed" id="detail-description">
-                            Integration with standard telephony or web-based VoIP. Our system handles 1000s of concurrent streams with zero latency at the point of entry.
-                        </p>
-</div>
-</div>
-</div>
+<div class="flex flex-col md:flex-row items-stretch gap-4 md:gap-0 justify-center" id="flow-cards-row">
+  <!-- Card 1 -->
+  <div class="flow-card glass-panel p-8 rounded-2xl w-full md:w-52 flex-shrink-0 text-center" style="opacity:0;transform:translateY(40px)">
+    <div class="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-primary text-2xl">phone_in_talk</span>
+    </div>
+    <h5 class="font-headline font-bold text-sm uppercase tracking-wider mb-2">Customer Calls</h5>
+    <p class="text-on-surface-variant text-xs leading-relaxed">Caller speaks naturally — no IVR menu, no language selection required</p>
+  </div>
+  <!-- Arrow -->
+  <div class="flow-arrow hidden md:flex self-center mx-1 flex-shrink-0"></div>
+  <!-- Card 2 -->
+  <div class="flow-card glass-panel p-8 rounded-2xl w-full md:w-52 flex-shrink-0 text-center" style="opacity:0;transform:translateY(40px)">
+    <div class="w-14 h-14 mx-auto rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-secondary text-2xl">language</span>
+    </div>
+    <h5 class="font-headline font-bold text-sm uppercase tracking-wider mb-2">Language ID</h5>
+    <p class="text-on-surface-variant text-xs leading-relaxed">Sarvam saarika identifies dialect in under 500ms from raw audio</p>
+  </div>
+  <!-- Arrow -->
+  <div class="flow-arrow hidden md:flex self-center mx-1 flex-shrink-0"></div>
+  <!-- Card 3 -->
+  <div class="flow-card glass-panel p-8 rounded-2xl w-full md:w-52 flex-shrink-0 text-center" style="opacity:0;transform:translateY(40px)">
+    <div class="w-14 h-14 mx-auto rounded-full bg-tertiary/10 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-tertiary text-2xl">neurology</span>
+    </div>
+    <h5 class="font-headline font-bold text-sm uppercase tracking-wider mb-2">Claude Reasons</h5>
+    <p class="text-on-surface-variant text-xs leading-relaxed">Claude maps intent, context, and generates the precise answer</p>
+  </div>
+  <!-- Arrow -->
+  <div class="flow-arrow hidden md:flex self-center mx-1 flex-shrink-0"></div>
+  <!-- Card 4 -->
+  <div class="flow-card glass-panel p-8 rounded-2xl w-full md:w-52 flex-shrink-0 text-center" style="opacity:0;transform:translateY(40px)">
+    <div class="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-primary text-2xl">record_voice_over</span>
+    </div>
+    <h5 class="font-headline font-bold text-sm uppercase tracking-wider mb-2">Voice Synthesis</h5>
+    <p class="text-on-surface-variant text-xs leading-relaxed">bulbul TTS renders the reply in the caller's language and voice</p>
+  </div>
+  <!-- Arrow -->
+  <div class="flow-arrow hidden md:flex self-center mx-1 flex-shrink-0"></div>
+  <!-- Card 5 -->
+  <div class="flow-card glass-panel p-8 rounded-2xl w-full md:w-52 flex-shrink-0 text-center" style="opacity:0;transform:translateY(40px)">
+    <div class="w-14 h-14 mx-auto rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+      <span class="material-symbols-outlined text-secondary text-2xl">sync</span>
+    </div>
+    <h5 class="font-headline font-bold text-sm uppercase tracking-wider mb-2">Loop Continues</h5>
+    <p class="text-on-surface-variant text-xs leading-relaxed">Context preserved turn-by-turn — complex multi-step conversations handled</p>
+  </div>
 </div>
 </div>
 </section>
@@ -530,8 +564,8 @@
 <span class="text-secondary font-mono text-sm tracking-widest uppercase px-4 py-1 rounded-full bg-secondary/10">Live Now</span>
 <span class="material-symbols-outlined text-secondary text-5xl">translate</span>
 </div>
-<h3 class="text-4xl md:text-5xl font-headline font-bold mb-6">Talktiv Translate</h3>
-<p class="text-on-surface-variant text-lg mb-8 max-w-xl">The core engine for real-time multilingual transcription and translation. Capable of understanding 22+ regional accents and technical jargon across industries.</p>
+<h3 class="text-4xl md:text-5xl font-headline font-bold mb-6">Talktiv VoIs</h3>
+<p class="text-on-surface-variant text-lg mb-8 max-w-xl">Real-time voice-to-voice translation across 9 Indian languages. Two people speak freely — Talktiv translates each utterance and plays it back in the other's language, hands-free.</p>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
 <ul class="space-y-4">
 <li class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">check_circle</span> <span class="text-sm">99.8% Transcription Accuracy</span></li>
@@ -547,9 +581,9 @@
 </div>
 </div>
 </div>
-<button class="w-fit flex items-center gap-2 text-secondary font-bold hover:gap-4 transition-all group/btn">
+<a href="https://app.talktivai.com" target="_blank" class="w-fit flex items-center gap-2 text-secondary font-bold hover:gap-4 transition-all group/btn">
                         Get Early Access <span class="material-symbols-outlined">arrow_right_alt</span>
-</button>
+</a>
 <div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-secondary/5 blur-3xl"></div>
 </div>
 </div>
@@ -629,24 +663,37 @@
 </div>
 </div>
 <div class="glass-panel rounded-2xl p-6 border border-primary/20">
-<p class="font-bold text-lg text-on-surface">Manikanta Mane</p>
-<p class="text-sm text-on-surface-variant mt-1">Founder &amp; CEO · Masters in Telecommunications · Hyderabad, India</p>
-<p class="text-sm text-on-surface-variant mt-2 leading-relaxed">Talktiv began when Manikanta watched his father — a Telugu-speaking real estate agent in Hyderabad — lose clients every week because of language barriers. That frustration became a mission: no Indian business should ever lose a customer because of language.</p>
-<p class="text-sm mt-2 font-semibold" style="color:var(--md-sys-color-primary,#D4AF37);opacity:.8">manikanta.mane@talktivai.com</p>
+<div class="flex items-start gap-4 mb-4">
+  <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+    <span class="material-symbols-outlined text-primary text-2xl">person</span>
+  </div>
+  <div>
+    <p class="font-bold text-lg text-on-surface">Manikanta Mane</p>
+    <p class="text-xs text-on-surface-variant">Founder &amp; CEO · Masters in Telecommunications</p>
+    <div class="flex gap-3 mt-1 text-xs text-on-surface-variant/60">
+      <span>📍 Hyderabad, India</span>
+      <span>·</span>
+      <span>🎓 Melbourne, Australia</span>
+    </div>
+  </div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-3">Talktiv began when Manikanta watched his father — a Telugu-speaking real estate agent in Hyderabad — lose clients every week because of language barriers. That frustration became a mission: no Indian business should ever lose a customer because of language.</p>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-3">After completing his Masters in Telecommunications in Melbourne, Manikanta returned to build the voice infrastructure layer for India — combining world-class AI with deep understanding of India's linguistic diversity.</p>
+<a href="mailto:manikanta.mane@talktivai.com" class="text-sm font-semibold hover:opacity-100 transition-opacity" style="color:#D4AF37;opacity:.8">manikanta.mane@talktivai.com</a>
 </div>
 </div>
 <div class="relative h-[400px] md:h-[600px] flex items-center justify-center reveal-up">
-<div class="absolute w-64 h-80 rounded-2xl glass-panel p-8 rotate-[-12deg] translate-x-[-40px] translate-y-[-20px] transition-all duration-500 hover:rotate-0 hover:translate-x-0 z-10 shadow-xl border-primary/20">
+<div class="about-card absolute w-64 h-80 rounded-2xl glass-panel p-8 rotate-[-12deg] translate-x-[-40px] translate-y-[-20px] z-10 shadow-xl border-primary/20">
 <span class="material-symbols-outlined text-primary mb-4 text-3xl">public</span>
 <h4 class="font-bold mb-2">India-first</h4>
 <p class="text-xs text-on-surface-variant leading-relaxed">Built specifically for the diverse linguistic architecture and dialect variations of the Indian subcontinent.</p>
 </div>
-<div class="absolute w-64 h-80 rounded-2xl bg-surface-container-high/90 backdrop-blur-md p-8 rotate-[2deg] translate-y-10 z-20 shadow-2xl border border-outline-variant/30">
+<div class="about-card absolute w-64 h-80 rounded-2xl bg-surface-container-high/90 backdrop-blur-md p-8 rotate-[2deg] translate-y-10 z-20 shadow-2xl border border-outline-variant/30">
 <span class="material-symbols-outlined text-secondary mb-4 text-3xl">bolt</span>
 <h4 class="font-bold mb-2">Real-time</h4>
 <p class="text-xs text-on-surface-variant leading-relaxed">Edge-computing optimized infrastructure for near-zero lag in critical healthcare and enterprise conversations.</p>
 </div>
-<div class="absolute w-64 h-80 rounded-2xl glass-panel p-8 rotate-[15deg] translate-x-[40px] translate-y-[-10px] z-30 shadow-xl border border-tertiary/20">
+<div class="about-card absolute w-64 h-80 rounded-2xl glass-panel p-8 rotate-[15deg] translate-x-[40px] translate-y-[-10px] z-30 shadow-xl border border-tertiary/20">
 <span class="material-symbols-outlined text-tertiary mb-4 text-3xl">corporate_fare</span>
 <h4 class="font-bold mb-2">Enterprise-ready</h4>
 <p class="text-xs text-on-surface-variant leading-relaxed">Robust SDKs and high-security APIs designed for global scale, complying with strict Indian data residency norms.</p>
@@ -695,9 +742,9 @@
 <div class="flex flex-col md:flex-row gap-10 md:gap-20">
 <div class="flex flex-col gap-4 font-body text-xs tracking-widest uppercase">
 <span class="text-white/40 mb-2">Connect</span>
-<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">LinkedIn</a>
-<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">X (Twitter)</a>
-<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">GitHub</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://linkedin.com/in/manikanta-mane" target="_blank" rel="noopener">LinkedIn</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://twitter.com/talktivai" target="_blank" rel="noopener">X (Twitter)</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="https://github.com/manemanikanta-ui" target="_blank" rel="noopener">GitHub</a>
 </div>
 <div class="flex flex-col gap-4 font-body text-xs tracking-widest uppercase">
 <span class="text-white/40 mb-2">Legal</span>
@@ -769,35 +816,74 @@
         requestAnimationFrame(update);
     }
 
-    // Pipeline Logic
-    const stepsData = {
-        1: { num: "01", title: "Seamless Inbound Access", desc: "Integration with standard telephony or web-based VoIP. Our system handles 1000s of concurrent streams with zero latency at the point of entry.", progress: 20 },
-        2: { num: "02", title: "Instant Language Fingerprinting", desc: "Within the first 500ms of audio, our proprietary 'LID-Core' identifies the base language and specific regional dialect (e.g., Bhojpuri vs. Khari Boli).", progress: 40 },
-        3: { num: "03", title: "Deep-Context Understanding", desc: "Unlike simple keyword matching, our Indic-LLM maps the intent, sentiment, and entity relationships to provide a high-fidelity semantic understanding.", progress: 60 },
-        4: { num: "04", title: "Low-Latency Response Generation", desc: "Responses are synthesized using regional-specific neural voices that mimic local speech patterns, ensuring a comfortable user experience.", progress: 80 },
-        5: { num: "05", title: "Contextual Conversation Loop", desc: "Every turn of conversation updates the long-term context window, allowing for complex multi-step inquiries without losing track of the goal.", progress: 100 }
-    };
+    // Timeline: scroll-driven entry animation + tl-line height
+    const tlEntries = document.querySelectorAll('.tl-entry');
+    const tlLine = document.getElementById('tl-line');
+    const tlContainer = document.getElementById('tl-container');
 
-    function activateStep(stepNum) {
-        document.querySelectorAll('.pipeline-step').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`step-${stepNum}`).classList.add('active');
-        
-        const data = stepsData[stepNum];
-        const panel = document.getElementById('step-detail-panel');
-        
-        panel.style.opacity = '0';
-        panel.style.transform = 'translateY(10px)';
-        
-        setTimeout(() => {
-            document.getElementById('detail-number').innerText = data.num;
-            document.getElementById('detail-title').innerText = data.title;
-            document.getElementById('detail-description').innerText = data.desc;
-            document.getElementById('pipeline-progress').style.width = data.progress + '%';
-            
-            panel.style.opacity = '1';
-            panel.style.transform = 'translateY(0)';
-        }, 200);
-    }
+    const tlObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry, i) => {
+            if (entry.isIntersecting) {
+                const idx = Array.from(tlEntries).indexOf(entry.target);
+                setTimeout(() => {
+                    entry.target.classList.add('tl-visible');
+                }, idx * 120);
+                tlObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+
+    tlEntries.forEach(el => tlObserver.observe(el));
+
+    // Animate tl-line height as container scrolls into view
+    const tlLineObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                tlLine.style.height = '100%';
+                tlLineObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    if (tlContainer) tlLineObserver.observe(tlContainer);
+
+    // Flow cards: scroll stagger entry
+    const flowCards = document.querySelectorAll('#flow-cards-row .flow-card');
+    const flowObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const idx = Array.from(flowCards).indexOf(entry.target);
+                setTimeout(() => {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    entry.target.style.transition = 'opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease';
+                }, idx * 100);
+                flowObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.2 });
+    flowCards.forEach(card => {
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease';
+        flowObserver.observe(card);
+    });
+
+    // About cards: mouse-follow tilt effect
+    document.querySelectorAll('.about-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const rx = ((e.clientY - cy) / rect.height) * 14;
+            const ry = ((e.clientX - cx) / rect.width) * -14;
+            card.style.transform = `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.05)`;
+            card.style.zIndex = '50';
+            card.style.boxShadow = '0 20px 40px rgba(212,175,55,0.25)';
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+            card.style.zIndex = '';
+            card.style.boxShadow = '';
+        });
+    });
 
     // Nav Active State
     window.addEventListener('scroll', () => {
