@@ -1114,8 +1114,14 @@
 #tv-bars.tv-bars-on span:nth-child(5){animation-delay:0s;height:14px}
 
 /* transcript */
-#tv-tx{text-align:center;max-height:54px;overflow:hidden;font-size:13px;
-  color:#735C00;line-height:1.5;font-style:italic;min-height:18px;width:100%}
+#tv-tx{display:flex;flex-direction:column;gap:5px;max-height:90px;overflow-y:auto;
+  width:100%;padding:2px 0;scroll-behavior:smooth}
+.tv-tx-user{align-self:flex-end;background:linear-gradient(135deg,#735C00,#D4AF37);
+  color:#fff;padding:5px 10px;border-radius:10px 10px 2px 10px;
+  font-size:11px;max-width:80%;line-height:1.4;word-break:break-word}
+.tv-tx-ai{align-self:flex-start;background:rgba(115,92,0,0.1);
+  color:#735C00;padding:5px 10px;border-radius:10px 10px 10px 2px;
+  font-size:11px;max-width:80%;line-height:1.4;font-style:italic;word-break:break-word}
 
 /* state label */
 #tv-slbl{font-size:11px;text-transform:uppercase;letter-spacing:.15em;
@@ -1483,32 +1489,52 @@ function setCallState(cs){
   }
 }
 
+function txAddBubble(cls, text){
+  if(!text) return;
+  var b=document.createElement('div');
+  b.className=cls;
+  b.textContent=text;
+  tx.appendChild(b);
+  tx.scrollTop=tx.scrollHeight;
+}
+
 function handleTalkMsg(d){
   if(d.type==='thinking'){
     setOrbState('processing');
-    tx.textContent='';
+    // Show user speech bubble if server returned the transcript
+    if(d.user_text) txAddBubble('tv-tx-user', d.user_text);
 
   }else if(d.type==='tts_chunk'){
-    // Append transcript as chunks arrive
-    if(d.transcript)tx.textContent+=(tx.textContent?' ':'')+d.transcript;
-    tvAudioQueue.push({audio:d.audio, isFirst:d.is_first, isFinal:false});
-    if(!tvIsPlaying)playNextChunk();
+    // Append each AI sentence as its own bubble
+    if(d.transcript) txAddBubble('tv-tx-ai', d.transcript);
+    if(d.audio){
+      tvAudioQueue.push({audio:d.audio, isFirst:d.is_first, isFinal:false});
+      if(!tvIsPlaying)playNextChunk();
+    }
 
   }else if(d.type==='tts_done'){
     // Sentinel — when drained, return to listening
     tvAudioQueue.push({audio:null, isFinal:true});
     if(!tvIsPlaying)playNextChunk();
 
+  }else if(d.type==='tts_text_chunk'){
+    // TTS failed for this sentence — show text only
+    if(d.transcript) txAddBubble('tv-tx-ai', d.transcript);
+    if(d.is_last){
+      tvAudioQueue.push({audio:null, isFinal:true});
+      if(!tvIsPlaying)playNextChunk();
+    }
+
   }else if(d.type==='tts_audio'){
     // Backward compat — single audio blob from old server
-    if(d.transcript)showWordByWord(d.transcript);
+    if(d.transcript) txAddBubble('tv-tx-ai', d.transcript);
     tvAudioQueue.push({audio:d.audio, isFirst:true, isFinal:false});
     tvAudioQueue.push({audio:null, isFinal:true});
     if(!tvIsPlaying)playNextChunk();
 
   }else if(d.type==='text'||d.type==='error'){
     var txt=d.message||'';
-    if(txt)showWordByWord(txt);
+    if(txt) txAddBubble('tv-tx-ai', txt);
     if(isMuted||!txt){setOrbState(callState==='incall'?'listening':'idle');}
     else speakText(txt);
   }
@@ -1651,6 +1677,7 @@ async function startCall(){
     vadProcessor=vadCtx.createScriptProcessor(512,1,1);
     src.connect(vadProcessor);vadProcessor.connect(vadCtx.destination);
     vadProcessor.onaudioprocess=onAudioProcess;
+    tx.innerHTML='';  // clear transcript on new call
     setCallState('incall');
     wsSend({type:'call_start'});
   }catch(e){
