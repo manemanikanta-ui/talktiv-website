@@ -1512,6 +1512,15 @@ function handleTalkMsg(d){
       if(!tvIsPlaying)playNextChunk();
     }
 
+  }else if(d.type==='lang_switch'){
+    var notif=document.createElement('div');
+    notif.style.cssText='text-align:center;margin:4px 0';
+    notif.innerHTML='<span style="background:rgba(212,175,55,0.15);color:#B8960C;'
+      +'padding:2px 10px;border-radius:10px;font-size:10px;font-weight:500">'
+      +'Language switched to '+d.lang_name+'</span>';
+    tx.appendChild(notif);
+    tx.scrollTop=tx.scrollHeight;
+
   }else if(d.type==='tts_done'){
     // Sentinel — when drained, return to listening
     tvAudioQueue.push({audio:null, isFinal:true});
