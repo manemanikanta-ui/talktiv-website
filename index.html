@@ -1151,6 +1151,19 @@
   box-shadow:0 4px 18px rgba(192,57,43,.45);transition:transform .2s}
 #tv-end:hover{transform:scale(1.07)}
 
+/* ── Engine toggle ── */
+#tv-eng-row{display:flex;align-items:center;gap:8px;margin-bottom:-4px}
+#tv-eng-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.13em;
+  color:rgba(115,92,0,.6);font-weight:700;white-space:nowrap}
+.tv-eng-pill{padding:4px 10px;border-radius:20px;border:1px solid rgba(212,175,55,.28);
+  background:transparent;font-size:11px;font-weight:700;color:#a09070;cursor:pointer;
+  transition:background .18s,color .18s,border-color .18s;
+  font-family:'Manrope','Inter',sans-serif;line-height:1}
+.tv-eng-pill.tv-eng-on{background:linear-gradient(135deg,#735C00,#D4AF37);
+  color:#fff;border-color:transparent}
+.tv-eng-pill:hover:not(.tv-eng-on){border-color:#D4AF37;color:#735C00}
+.tv-eng-pill:disabled{opacity:.4;cursor:default}
+
 /* ── Mobile ── */
 @media(max-width:480px){
   #tv-win{width:calc(100vw - 16px);right:8px;bottom:80px;
@@ -1218,6 +1231,12 @@
     <div id="tv-tx"></div>
     <div id="tv-slbl">Talk to Talktiv AI</div>
     <div id="tv-tsub">Press call to start</div>
+    <!-- Engine toggle -->
+    <div id="tv-eng-row">
+      <span id="tv-eng-lbl">Engine:</span>
+      <button class="tv-eng-pill tv-eng-on" id="tv-eng-classic">Classic</button>
+      <button class="tv-eng-pill" id="tv-eng-pipecat">✦ Pipecat</button>
+    </div>
     <!-- State A: idle — green call button -->
     <div id="tv-idle-row">
       <button id="tv-call-btn" class="tv-ms" aria-label="Start call" style="font-variation-settings:'FILL' 1">call</button>
@@ -1235,7 +1254,7 @@
 (function(){
 'use strict';
 
-var WS_URL   = 'wss://app.talktivai.com/chat';
+var wsEndpoint = 'wss://app.talktivai.com/chat';
 var BOOK_URL = 'https://web-production-6346d.up.railway.app/book-appointment';
 var SID      = 'tv-' + Math.random().toString(36).slice(2,10);
 var GREET    = 'Hi! I\'m Talktiv, your AI assistant \uD83C\uDF10 I can answer questions, book a demo, or connect you with our team in any language. How can I help?';
@@ -1266,7 +1285,23 @@ var bubble  = document.getElementById('tv-bubble'),
     idleRow  = document.getElementById('tv-idle-row'),
     incallRow= document.getElementById('tv-incall-row'),
     muteBtn  = document.getElementById('tv-mute'),
-    endBtn   = document.getElementById('tv-end');
+    endBtn   = document.getElementById('tv-end'),
+    engClassic = document.getElementById('tv-eng-classic'),
+    engPipecat = document.getElementById('tv-eng-pipecat');
+
+/* ── Engine toggle ── */
+engClassic.addEventListener('click', function(){
+  if(callState!=='idle')return;
+  wsEndpoint='wss://app.talktivai.com/chat';
+  engClassic.classList.add('tv-eng-on');
+  engPipecat.classList.remove('tv-eng-on');
+});
+engPipecat.addEventListener('click', function(){
+  if(callState!=='idle')return;
+  wsEndpoint='wss://app.talktivai.com/voice-pipeline';
+  engPipecat.classList.add('tv-eng-on');
+  engClassic.classList.remove('tv-eng-on');
+});
 
 /* ── State ── */
 var isOpen=false, mode='chat', greeted=false, tvDisclaimerDismissed=false;
@@ -1287,7 +1322,7 @@ var talkCtx=null;
 function connect(){
   if(ws&&(ws.readyState===0||ws.readyState===1))return;
   wsOk=false; setCst('Connecting...');
-  ws=new WebSocket(WS_URL);
+  ws=new WebSocket(wsEndpoint);
   ws.onopen=function(){wsOk=true;setCst('');while(wsQ.length){ws.send(JSON.stringify(wsQ.shift()));}};
   ws.onmessage=function(e){
     try{var d=JSON.parse(e.data);mode==='talk'?handleTalkMsg(d):handleChatMsg(d);}
