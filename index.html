@@ -1238,7 +1238,10 @@
 
 const WS_URL = 'wss://app.talktivai.com/chat';
 var BOOK_URL = 'https://web-production-6346d.up.railway.app/book-appointment';
-var SID      = 'tv-' + Math.random().toString(36).slice(2,10);
+// SID is used for chat turns; serverSID is assigned by the server on each new connection
+// for voice turns to prevent session reuse across reconnects.
+var SID       = 'tv-' + Math.random().toString(36).slice(2,10);
+var serverSID = null;
 var GREET    = 'Hi! I\'m Talktiv, your AI assistant \uD83C\uDF10 I can answer questions, book a demo, or connect you with our team in any language. How can I help?';
 
 /* ── DOM ── */
@@ -1291,10 +1294,14 @@ function connect(){
   ws=new WebSocket(WS_URL);
   ws.onopen=function(){wsOk=true;setCst('');while(wsQ.length){ws.send(JSON.stringify(wsQ.shift()));}};
   ws.onmessage=function(e){
-    try{var d=JSON.parse(e.data);mode==='talk'?handleTalkMsg(d):handleChatMsg(d);}
-    catch(err){console.error('[Talktiv]',err);}
+    try{
+      var d=JSON.parse(e.data);
+      // Capture server-generated session ID on connect — used for all voice turns
+      if(d.type==='session_init'&&d.session_id){serverSID=d.session_id;return;}
+      mode==='talk'?handleTalkMsg(d):handleChatMsg(d);
+    }catch(err){console.error('[Talktiv]',err);}
   };
-  ws.onclose=function(){wsOk=false;setCst('Reconnecting...');setTimeout(connect,3000);};
+  ws.onclose=function(){wsOk=false;serverSID=null;setCst('Reconnecting...');setTimeout(connect,3000);};
   ws.onerror=function(){setCst('Connection error \u2014 retrying...');};
 }
 function wsSend(p){
@@ -1664,7 +1671,10 @@ async function stopAndSend(){
       for(var i=0;i<bytes.length;i+=8192)
         b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
       b64=btoa(b64);
-      wsSend({type:'voice_input',audio:b64,mime:'audio/wav',lang:'auto'});
+      // Use server-issued session ID for voice turns (prevents reuse across reconnects)
+      var voiceMsg={type:'voice_input',audio:b64,mime:'audio/wav',lang:'auto'};
+      if(serverSID) voiceMsg.session_id=serverSID;
+      wsSend(voiceMsg);
     }catch(err){
       console.error('[Talktiv VAD] WAV convert',err);
       if(callState==='incall')setOrbState('listening');
