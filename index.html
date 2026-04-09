@@ -1284,8 +1284,10 @@ var isMuted=false, isAIPlaying=false;
 var tvAudioQueue=[], tvIsPlaying=false;
 var vadStream=null, vadCtx=null, vadProcessor=null;
 var isRecording=false, recordChunks=[], vadMediaRec=null;
-var VAD_THRESHOLD=0.015, SILENCE_MS=1200, silenceTimer=null;
+var VAD_THRESHOLD=0.015, SILENCE_MS=2000, silenceTimer=null;
+var recordingStartMs=0;
 var talkCtx=null;
+var isCallActive=false;   // set true on startCall, false on endCall — guards audio playback
 
 /* ══ WebSocket ══ */
 function connect(){
@@ -1305,7 +1307,8 @@ function connect(){
   ws.onerror=function(){setCst('Connection error \u2014 retrying...');};
 }
 function wsSend(p){
-  p.session_id=SID;
+  // Only set default SID if caller hasn't already set a specific session_id (e.g. serverSID)
+  if(!p.session_id) p.session_id=SID;
   wsOk&&ws&&ws.readyState===1?ws.send(JSON.stringify(p)):wsQ.push(p)||connect();
 }
 
@@ -1549,7 +1552,14 @@ function handleTalkMsg(d){
     tvAudioQueue.push({audio:null, isFinal:true});
     if(!tvIsPlaying)playNextChunk();
 
-  }else if(d.type==='text'||d.type==='error'){
+  }else if(d.type==='error'){
+    // Error messages (e.g. "Could not understand audio") show as status, never spoken
+    var errTxt=d.message||'';
+    if(errTxt){tsubEl.textContent=errTxt;tsubEl.style.display='';}
+    setOrbState(callState==='incall'?'listening':'idle');
+    // Auto-clear the status after 3s
+    setTimeout(function(){if(callState==='incall'){tsubEl.style.display='none';}},3000);
+  }else if(d.type==='text'){
     var txt=d.message||'';
     if(txt) txAddBubble('tv-tx-ai', txt);
     if(isMuted||!txt){setOrbState(callState==='incall'?'listening':'idle');}
@@ -1558,6 +1568,8 @@ function handleTalkMsg(d){
 }
 
 async function playNextChunk(){
+  // Bail immediately if call ended — drain queue silently
+  if(!isCallActive){tvAudioQueue=[];tvIsPlaying=false;isAIPlaying=false;return;}
   if(tvAudioQueue.length===0){tvIsPlaying=false;return;}
   var chunk=tvAudioQueue.shift();
   if(chunk.isFinal){
@@ -1566,6 +1578,8 @@ async function playNextChunk(){
     if(callState==='incall')setOrbState('listening');else setOrbState('idle');
     return;
   }
+  // Double-check again after async queue shift
+  if(!isCallActive){tvAudioQueue=[];tvIsPlaying=false;isAIPlaying=false;return;}
   tvIsPlaying=true;
   if(chunk.isFirst){setOrbState('speaking');isAIPlaying=true;}
   try{
@@ -1615,22 +1629,52 @@ function speakText(text){
 /* ── WAV conversion (reused by VAD send) ── */
 async function convertToWav(webmBlob){
   var arrayBuffer=await webmBlob.arrayBuffer();
-  var ac=new AudioContext({sampleRate:16000});
-  var decoded=await ac.decodeAudioData(arrayBuffer);
-  var samples=decoded.getChannelData(0);
-  var pcm=new Int16Array(samples.length);
-  for(var i=0;i<samples.length;i++)pcm[i]=Math.max(-32768,Math.min(32767,Math.round(samples[i]*32767)));
+  // Use OfflineAudioContext to decode; native AudioContext sample rate varies by browser.
+  // We always need 16kHz mono for Sarvam STT.
+  var TARGET_RATE=16000;
+  // First, decode at native rate to get correct audio data
+  var ac=new AudioContext();
+  var decoded=await ac.decodeAudioData(arrayBuffer.slice(0));
+  await ac.close();
+  var srcRate=decoded.sampleRate;
+  var srcSamples=decoded.getChannelData(0);
+
+  // If browser did NOT decode to 16kHz, resample manually via linear interpolation
+  var finalSamples;
+  if(srcRate===TARGET_RATE){
+    finalSamples=srcSamples;
+  }else{
+    var ratio=srcRate/TARGET_RATE;
+    var newLen=Math.round(srcSamples.length/ratio);
+    finalSamples=new Float32Array(newLen);
+    for(var i=0;i<newLen;i++){
+      var pos=i*ratio;
+      var idx=Math.floor(pos);
+      var frac=pos-idx;
+      var a=srcSamples[idx]||0;
+      var b=(idx+1<srcSamples.length)?srcSamples[idx+1]:a;
+      finalSamples[i]=a+(b-a)*frac;
+    }
+  }
+
+  var pcm=new Int16Array(finalSamples.length);
+  for(var j=0;j<finalSamples.length;j++)
+    pcm[j]=Math.max(-32768,Math.min(32767,Math.round(finalSamples[j]*32767)));
+
   var wavBuffer=new ArrayBuffer(44+pcm.byteLength);
   var view=new DataView(wavBuffer);
-  function wr(offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));}
+  function wr(offset,str){for(var k=0;k<str.length;k++)view.setUint8(offset+k,str.charCodeAt(k));}
   wr(0,'RIFF');view.setUint32(4,36+pcm.byteLength,true);
   wr(8,'WAVE');wr(12,'fmt ');
-  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);
-  view.setUint32(24,16000,true);view.setUint32(28,32000,true);
-  view.setUint16(32,2,true);view.setUint16(34,16,true);
+  view.setUint32(16,16,true);           // PCM chunk size
+  view.setUint16(20,1,true);            // PCM format
+  view.setUint16(22,1,true);            // 1 channel (mono)
+  view.setUint32(24,TARGET_RATE,true);  // sample rate = 16000
+  view.setUint32(28,TARGET_RATE*2,true);// byte rate = 16000 * 2
+  view.setUint16(32,2,true);            // block align = 2 bytes
+  view.setUint16(34,16,true);           // bits per sample = 16
   wr(36,'data');view.setUint32(40,pcm.byteLength,true);
   new Int16Array(wavBuffer,44).set(pcm);
-  await ac.close();
   return wavBuffer;
 }
 
@@ -1649,7 +1693,7 @@ function onAudioProcess(e){
 }
 
 function startVadRecording(){
-  isRecording=true;recordChunks=[];
+  isRecording=true;recordChunks=[];recordingStartMs=Date.now();
   var mime='audio/webm;codecs=opus';
   if(!MediaRecorder.isTypeSupported(mime))mime='audio/webm';
   vadMediaRec=new MediaRecorder(vadStream,mime?{mimeType:mime}:{});
@@ -1659,8 +1703,15 @@ function startVadRecording(){
 
 async function stopAndSend(){
   if(!isRecording||!vadMediaRec)return;
+  var duration=Date.now()-recordingStartMs;
   clearTimeout(silenceTimer);silenceTimer=null;
   isRecording=false;
+  // Discard very short recordings (<400ms) — likely noise/cough, not speech.
+  // These produce empty STT results which show as "Could not understand audio."
+  if(duration<400){
+    if(callState==='incall')setOrbState('listening');
+    return;
+  }
   setOrbState('processing');
   if(vadMediaRec.state!=='inactive')vadMediaRec.stop();
   vadMediaRec.onstop=async function(){
@@ -1698,6 +1749,7 @@ async function startCall(){
     src.connect(vadProcessor);vadProcessor.connect(vadCtx.destination);
     vadProcessor.onaudioprocess=onAudioProcess;
     tx.innerHTML='';  // clear transcript on new call
+    isCallActive=true;
     setCallState('incall');
     wsSend({type:'call_start'});
   }catch(e){
@@ -1707,13 +1759,17 @@ async function startCall(){
 }
 
 function endCall(){
+  // Set flag FIRST — playNextChunk checks this on every tick and stops immediately
+  isCallActive=false;
   if(isRecording&&vadMediaRec&&vadMediaRec.state!=='inactive')vadMediaRec.stop();
   isRecording=false;isAIPlaying=false;tvAudioQueue=[];tvIsPlaying=false;
   clearTimeout(silenceTimer);silenceTimer=null;
   if(vadProcessor){try{vadProcessor.disconnect();}catch(e){}}
   if(vadCtx&&vadCtx.state!=='closed'){try{vadCtx.close();}catch(e){}}
   if(vadStream)vadStream.getTracks().forEach(function(t){t.stop();});
-  if(talkCtx){try{talkCtx.close();}catch(e){}}
+  // Close the active TTS AudioContext immediately — stops any currently-playing audio chunk
+  if(talkCtx&&talkCtx.state!=='closed'){try{talkCtx.close();}catch(e){}}
+  talkCtx=null;
   if(window.speechSynthesis)window.speechSynthesis.cancel();
   vadStream=null;vadCtx=null;vadProcessor=null;vadMediaRec=null;
   try{if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'call_end',session_id:SID}));}catch(e){}
