@@ -1303,7 +1303,19 @@ function connect(){
       mode==='talk'?handleTalkMsg(d):handleChatMsg(d);
     }catch(err){console.error('[Talktiv]',err);}
   };
-  ws.onclose=function(){wsOk=false;serverSID=null;setCst('Reconnecting...');setTimeout(connect,3000);};
+  ws.onclose=function(){
+    wsOk=false;serverSID=null;
+    // If WS dropped mid-call, clear transcript and reset to idle
+    if(isCallActive){
+      isCallActive=false;tvAudioQueue=[];tvIsPlaying=false;
+      tx.innerHTML='';setOrbState('idle');
+      slbl.textContent='Talk to Talktiv AI';
+      tsubEl.textContent='Press call to start';tsubEl.style.display='';
+      idleRow.style.display='flex';incallRow.style.display='none';
+      callState='idle';
+    }
+    setCst('Reconnecting...');setTimeout(connect,3000);
+  };
   ws.onerror=function(){setCst('Connection error \u2014 retrying...');};
 }
 function wsSend(p){
@@ -1510,6 +1522,9 @@ function txAddBubble(cls, text){
 }
 
 function handleTalkMsg(d){
+  // Ignore all content messages after hang-up — prevents stale server
+  // responses from repopulating the transcript after the call ends.
+  if(!isCallActive&&d.type!=='call_ended'&&d.type!=='call_ready'){return;}
   if(d.type==='thinking'){
     setOrbState('processing');
     // Show user speech bubble if server returned the transcript
