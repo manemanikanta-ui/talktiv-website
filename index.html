@@ -1288,6 +1288,7 @@ var VAD_THRESHOLD=0.015, SILENCE_MS=2000, silenceTimer=null;
 var recordingStartMs=0;
 var talkCtx=null;
 var isCallActive=false;   // set true on startCall, false on endCall — guards audio playback
+var reconnectTimer=null;  // handle for the auto-reconnect setTimeout — cancelled on manual startCall
 
 /* ══ WebSocket ══ */
 function connect(){
@@ -1314,7 +1315,7 @@ function connect(){
       idleRow.style.display='flex';incallRow.style.display='none';
       callState='idle';
     }
-    setCst('Reconnecting...');setTimeout(connect,3000);
+    setCst('Reconnecting...');reconnectTimer=setTimeout(connect,3000);
   };
   ws.onerror=function(){setCst('Connection error \u2014 retrying...');};
 }
@@ -1751,8 +1752,27 @@ async function stopAndSend(){
 /* ── Call start / end ── */
 async function startCall(){
   try{
-    // Close any stale WebSocket before opening a fresh one
-    if(ws&&ws.readyState!==WebSocket.CLOSED){ws.close();ws=null;wsOk=false;}
+    // 1. Cancel any pending auto-reconnect — prevents the onclose cascade
+    //    where closing a background WS schedules yet another connect().
+    if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
+
+    // 2. Reset ALL audio/call state so the second call starts completely clean.
+    isCallActive=false;
+    tvAudioQueue=[];tvIsPlaying=false;isAIPlaying=false;
+    if(talkCtx&&talkCtx.state!=='closed'){try{talkCtx.close();}catch(e){}}
+    talkCtx=null;
+
+    // 3. Flush any stale queued messages (e.g. leftover call_start from previous call).
+    wsQ=[];
+
+    // 4. Close the existing WebSocket. Temporarily null onclose so closing it here
+    //    does NOT trigger the auto-reconnect timer or the mid-call cleanup branch.
+    if(ws){
+      ws.onclose=null;
+      if(ws.readyState!==WebSocket.CLOSED)ws.close();
+      ws=null;wsOk=false;serverSID=null;
+    }
+
     await new Promise(function(r){setTimeout(r,200);});
     connect();
     vadStream=await navigator.mediaDevices.getUserMedia({
